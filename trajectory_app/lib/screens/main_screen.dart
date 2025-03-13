@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:trajectory_app/cards/upload_form_card.dart';
 import 'package:trajectory_app/const/constant.dart';
 import 'package:trajectory_app/widgets/add_member_widget.dart';
 import 'package:trajectory_app/widgets/profile_widget.dart';
 import 'package:trajectory_app/widgets/reports_widget.dart';
 import 'package:trajectory_app/widgets/side_menu_widget.dart';
+import 'package:trajectory_app/widgets/upload_form_widget.dart';
 
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
@@ -15,7 +17,7 @@ class MainScreen extends StatelessWidget {
       body: SafeArea(
         child: _buildPage(
           SideMenuWidget(type: 'member'),
-          AddMemberWidget(),
+          UploadFormWidget(),
           ProfileWidget(type: 'member'),
         ),
       ),
