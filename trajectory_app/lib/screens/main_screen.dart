@@ -3,6 +3,7 @@ import 'package:trajectory_app/cards/upload_form_card.dart';
 import 'package:trajectory_app/const/constant.dart';
 import 'package:trajectory_app/widgets/add_member_widget.dart';
 import 'package:trajectory_app/widgets/profile_widget.dart';
+import 'package:trajectory_app/widgets/records_widget.dart';
 import 'package:trajectory_app/widgets/reports_widget.dart';
 import 'package:trajectory_app/widgets/side_menu_widget.dart';
 import 'package:trajectory_app/widgets/upload_form_widget.dart';
@@ -17,7 +18,7 @@ class MainScreen extends StatelessWidget {
       body: SafeArea(
         child: _buildPage(
           SideMenuWidget(type: 'member'),
-          UploadFormWidget(),
+          RecordsWidget(),
           ProfileWidget(type: 'member'),
         ),
       ),
@@ -40,10 +41,17 @@ _buildPage(
           ProfileWidget(type: 'member'),
  ),
 
-成員-腦部影像分析
+成員-腦部分析
 _buildPage(
           SideMenuWidget(type: 'member'),
           ReportsWidget(),
+          ProfileWidget(type: 'member'),
+ ),
+
+成員-影像紀錄
+_buildPage(
+          SideMenuWidget(type: 'member'),
+          RecordsWidget(),
           ProfileWidget(type: 'member'),
  ),
 */
