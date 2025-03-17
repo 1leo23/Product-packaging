@@ -1,139 +1,196 @@
 import 'package:flutter/material.dart';
 import 'package:trajectory_app/cards/custom_card.dart';
+import 'package:trajectory_app/models/record_model.dart';
 
 class BrainViewerCard extends StatefulWidget {
-  const BrainViewerCard({super.key});
+  final RecordModel record;
+  final int recordIndex;
+  final void Function(int) popBrainViewer;
+  const BrainViewerCard({
+    super.key,
+    required this.record,
+    required this.recordIndex,
+    required this.popBrainViewer,
+  });
 
   @override
-  State<BrainViewerCard> createState() => _BrainViewerCard();
+  State<BrainViewerCard> createState() => _BrainViewerCardState();
 }
 
-class _BrainViewerCard extends State<BrainViewerCard> {
-  // 初始切片數字
+class _BrainViewerCardState extends State<BrainViewerCard> {
+  // 初始切片數
   int axialSlice = 64;
   int coronalSlice = 96;
   int sagittalSlice = 64;
 
-  @override
-  Widget build(BuildContext context) {
-    return CustomCard(
-      child: Column(
-        children: [
-          // 標題區
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '2022年02月28日',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                    Text(
-                      '顱腔年齡 / 腦部年齡 : 62 / 71 歲',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                  ],
-                ),
-                IconButton(
-                  icon: Icon(Icons.close, color: Colors.white),
-                  onPressed: () {
-                    Navigator.pop(context); // 關閉 widget
-                  },
-                ),
-              ],
+  // 建立切片控制元件
+  Widget _buildSliceControl(
+    String label,
+    int value,
+    ValueChanged<String> onChanged,
+    VoidCallback onDecrease,
+    VoidCallback onIncrease,
+  ) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        SizedBox(height: 8),
+        Container(
+          width: 230,
+          height: 230,
+          decoration: BoxDecoration(
+            color: Colors.black,
+            image: DecorationImage(
+              image: AssetImage('assets/mri_placeholder.png'),
+              fit: BoxFit.cover,
             ),
           ),
-          // 影像區
-          Expanded(
-            child: Row(
-              children: [
-                _buildView('Axial', axialSlice, 'A', 'P'), // 軸向視圖
-                _buildView('Coronal', coronalSlice, 'S', 'I'), // 冠狀視圖
-                _buildView('Sagittal', sagittalSlice, 'S', 'I'), // 矢狀視圖
-              ],
+        ),
+        SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              onPressed: onDecrease,
+              icon: Icon(Icons.remove, color: Colors.white),
+              style: IconButton.styleFrom(backgroundColor: Colors.grey[800]),
             ),
-          ),
-        ],
-      ),
+            SizedBox(width: 8),
+            SizedBox(
+              width: 60,
+              child: TextField(
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18, color: Colors.white),
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.grey[900],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                onChanged: onChanged,
+                controller: TextEditingController(text: value.toString()),
+              ),
+            ),
+            SizedBox(width: 8),
+            IconButton(
+              onPressed: onIncrease,
+              icon: Icon(Icons.add, color: Colors.white),
+              style: IconButton.styleFrom(backgroundColor: Colors.grey[800]),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
-  // 構建單個視圖的函數
-  Widget _buildView(
-    String viewType,
-    int slice,
-    String topLabel,
-    String bottomLabel,
-  ) {
-    return Expanded(
-      child: Stack(
-        alignment: Alignment.center,
+  @override
+  Widget build(BuildContext context) {
+    return CustomCard(
+      padding: EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // MRI 影像（這裡使用占位符，需替換為實際影像）
-          Container(
-            color: Colors.grey[800], // 假設的影像背景
-            child: Center(
-              child: Text(
-                '$viewType View', // 占位符，顯示視圖名稱
-                style: TextStyle(color: Colors.white),
+          // 標題區域
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              SizedBox(width: 40),
+              Column(
+                children: [
+                  Text(
+                    "${widget.record.yyyy}年${widget.record.mm}月${widget.record.dd}日",
+                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  ),
+                  Text(
+                    "實際年齡 / 腦部年齡：${widget.record.actualAge} / ${widget.record.brainAge} 歲",
+                    style: TextStyle(fontSize: 14, color: Colors.white),
+                  ),
+                ],
               ),
-            ),
+              IconButton(
+                onPressed: () {
+                  widget.popBrainViewer(widget.recordIndex);
+                },
+                icon: Icon(Icons.close, color: Colors.white, size: 24),
+              ),
+            ],
           ),
-          // 十字線
-          Positioned(
-            top: 0,
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(topLabel, style: TextStyle(color: Colors.blue)),
-                Container(height: 1, color: Colors.blue), // 水平線
-                Expanded(child: Center()),
-                Container(height: 1, color: Colors.blue), // 垂直線（模擬效果）
-                Text(bottomLabel, style: TextStyle(color: Colors.blue)),
-              ],
-            ),
+          SizedBox(height: 16),
+
+          // MRI 影像顯示區域
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildSliceControl(
+                "Axial",
+                axialSlice,
+                (value) {
+                  setState(() {
+                    axialSlice = int.tryParse(value) ?? axialSlice;
+                  });
+                },
+                () {
+                  setState(() {
+                    if (axialSlice > 0) axialSlice--;
+                  });
+                },
+                () {
+                  setState(() {
+                    axialSlice++;
+                  });
+                },
+              ),
+              _buildSliceControl(
+                "Coronal",
+                coronalSlice,
+                (value) {
+                  setState(() {
+                    coronalSlice = int.tryParse(value) ?? coronalSlice;
+                  });
+                },
+                () {
+                  setState(() {
+                    if (coronalSlice > 0) coronalSlice--;
+                  });
+                },
+                () {
+                  setState(() {
+                    coronalSlice++;
+                  });
+                },
+              ),
+              _buildSliceControl(
+                "Sagittal",
+                sagittalSlice,
+                (value) {
+                  setState(() {
+                    sagittalSlice = int.tryParse(value) ?? sagittalSlice;
+                  });
+                },
+                () {
+                  setState(() {
+                    if (sagittalSlice > 0) sagittalSlice--;
+                  });
+                },
+                () {
+                  setState(() {
+                    sagittalSlice++;
+                  });
+                },
+              ),
+            ],
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            child: Container(width: 1, color: Colors.blue), // 垂直線
-          ),
-          // 導航控制
-          Positioned(
-            bottom: 16,
-            child: Row(
-              children: [
-                IconButton(
-                  icon: Icon(Icons.remove, color: Colors.white),
-                  onPressed: () {
-                    setState(() {
-                      if (viewType == 'Axial') axialSlice--;
-                      if (viewType == 'Coronal') coronalSlice--;
-                      if (viewType == 'Sagittal') sagittalSlice--;
-                    });
-                  },
-                ),
-                Text('$slice', style: TextStyle(color: Colors.white)),
-                IconButton(
-                  icon: Icon(Icons.add, color: Colors.white),
-                  onPressed: () {
-                    setState(() {
-                      if (viewType == 'Axial') axialSlice++;
-                      if (viewType == 'Coronal') coronalSlice++;
-                      if (viewType == 'Sagittal') sagittalSlice++;
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
+          //SizedBox(height: 16),
         ],
       ),
     );
