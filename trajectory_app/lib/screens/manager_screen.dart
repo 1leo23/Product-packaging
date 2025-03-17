@@ -1,64 +1,64 @@
 import 'package:flutter/material.dart';
-import 'package:trajectory_app/cards/upload_form_card.dart';
 import 'package:trajectory_app/const/constant.dart';
 import 'package:trajectory_app/widgets/add_member_widget.dart';
+import 'package:trajectory_app/widgets/member_list_widget.dart';
 import 'package:trajectory_app/widgets/profile_widget.dart';
-import 'package:trajectory_app/widgets/records_widget.dart';
-import 'package:trajectory_app/widgets/reports_widget.dart';
 import 'package:trajectory_app/widgets/side_menu_widget.dart';
 import 'package:trajectory_app/widgets/upload_form_widget.dart';
 
-class MainScreen extends StatelessWidget {
-  const MainScreen({super.key});
+class ManagerScreen extends StatefulWidget {
+  const ManagerScreen({super.key});
 
+  @override
+  State<ManagerScreen> createState() => _ManagerScreenState();
+}
+
+class _ManagerScreenState extends State<ManagerScreen> {
+  int _selectedIndex = 0;
+  void onMenuTap(int index) {
+    setState(() {
+      if (index == 3) {
+        Navigator.pop(context);
+        return;
+      }
+      _selectedIndex = index;
+    });
+  }
+
+  final mainWidgetList = <Widget>[
+    MemberListWidget(),
+    UploadFormWidget(),
+    AddMemberWidget(),
+  ];
+  final profileWidgetList = <Widget>[
+    ProfileWidget(type: 'manager'),
+    ProfileWidget(type: 'member'),
+    ProfileWidget(type: 'member'),
+  ];
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _appBar(),
+
       body: SafeArea(
         child: _buildPage(
-          SideMenuWidget(type: 'member'),
-          RecordsWidget(),
-          ProfileWidget(type: 'member'),
+          SideMenuWidget(
+            type: 'manager',
+            selectedIndex: _selectedIndex,
+            onMenuTap: onMenuTap,
+          ),
+          mainWidgetList[_selectedIndex],
+          profileWidgetList[_selectedIndex],
         ),
       ),
     );
   }
 }
 
-/*
-醫師-上傳影像
-_buildPage(
-          SideMenuWidget(type: 'manager'),
-          UploadFormWidget(),
-          ProfileWidget(type: 'member'),
- ),
-
-醫師-新增成員
-_buildPage(
-          SideMenuWidget(type: 'manager'),
-          AddMemberWidget(),
-          ProfileWidget(type: 'member'),
- ),
-
-成員-腦部分析
-_buildPage(
-          SideMenuWidget(type: 'member'),
-          ReportsWidget(),
-          ProfileWidget(type: 'member'),
- ),
-
-成員-影像紀錄
-_buildPage(
-          SideMenuWidget(type: 'member'),
-          RecordsWidget(),
-          ProfileWidget(type: 'member'),
- ),
-*/
 Row _buildPage(
   SideMenuWidget sideMenuWidget,
   Widget mainWidget,
-  ProfileWidget profileWidget,
+  Widget profileWidget,
 ) {
   return Row(
     children: [

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:trajectory_app/screens/main_screen.dart';
+import 'package:trajectory_app/screens/member_screen.dart';
+import 'package:trajectory_app/screens/manager_screen.dart';
+import 'package:trajectory_app/screens/signin_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,7 +19,11 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.black,
         brightness: Brightness.dark,
       ),
-      home: const MainScreen(),
+      home: const SigninScreen(),
+      routes: {
+        '/managerScreen': (context) => const ManagerScreen(),
+        '/memberScreen': (context) => const MemberScreen(),
+      },
     );
   }
 }

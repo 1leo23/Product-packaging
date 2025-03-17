@@ -4,14 +4,20 @@ import 'package:trajectory_app/data/side_menu_data.dart';
 
 class SideMenuWidget extends StatefulWidget {
   final String type;
-  const SideMenuWidget({super.key, required this.type});
+  final Function(int) onMenuTap;
+  final int selectedIndex;
+  const SideMenuWidget({
+    super.key,
+    required this.type,
+    required this.onMenuTap,
+    required this.selectedIndex,
+  });
 
   @override
   State<SideMenuWidget> createState() => _SideMenuWidgetState();
 }
 
 class _SideMenuWidgetState extends State<SideMenuWidget> {
-  int selectedIndex = 0;
   @override
   Widget build(BuildContext context) {
     final data = SideMenuData();
@@ -26,8 +32,8 @@ class _SideMenuWidgetState extends State<SideMenuWidget> {
   }
 
   Widget buildMenuEntry(SideMenuData data, int index) {
-    final isSelected = selectedIndex == index;
-    final menuMap = {'manager': data.managerMenu, 'user': data.userMenu};
+    final isSelected = widget.selectedIndex == index;
+    final menuMap = {'manager': data.managerMenu, 'member': data.userMenu};
     final menu = menuMap[widget.type] ?? data.userMenu; // 預設值
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 5),
@@ -37,10 +43,7 @@ class _SideMenuWidgetState extends State<SideMenuWidget> {
       ),
       child: InkWell(
         //帶有水波點擊效果的按鈕
-        onTap:
-            () => setState(() {
-              selectedIndex = index;
-            }),
+        onTap: () => widget.onMenuTap(index),
         child: Row(
           children: [
             Padding(

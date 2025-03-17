@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:trajectory_app/const/constant.dart';
 
-class LoginWidget extends StatelessWidget {
-  const LoginWidget({super.key});
+class SigninScreen extends StatelessWidget {
+  const SigninScreen({super.key});
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -35,7 +35,10 @@ class LoginWidget extends StatelessWidget {
               ),
               Expanded(
                 child: TabBarView(
-                  children: [_buildLoginForm(), _buildLoginForm()],
+                  children: [
+                    _buildLoginForm(context, '/memberScreen'),
+                    _buildLoginForm(context, '/managerScreen'),
+                  ],
                 ),
               ),
             ],
@@ -45,7 +48,7 @@ class LoginWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildLoginForm() {
+  Widget _buildLoginForm(BuildContext context, String route) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
       child: Column(
@@ -97,7 +100,10 @@ class LoginWidget extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8.0),
                 ),
               ),
-              onPressed: () {},
+              onPressed: () {
+                //登入事件
+                Navigator.pushNamed(context, route);
+              },
               child: Text(
                 '登入',
                 style: TextStyle(fontSize: 18, color: Colors.white),
