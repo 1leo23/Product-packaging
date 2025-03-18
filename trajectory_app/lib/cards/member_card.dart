@@ -65,7 +65,9 @@ class MemberCard extends StatelessWidget {
                               horizontal: 16.0,
                             ),
                           ),
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/memberScreen');
+                          },
                           child: Text(
                             '選擇',
                             style: TextStyle(color: Colors.white, fontSize: 16),

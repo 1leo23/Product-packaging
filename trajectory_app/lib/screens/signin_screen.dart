@@ -5,43 +5,51 @@ class SigninScreen extends StatelessWidget {
   const SigninScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: cardBackgroundColor,
-        body: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 32.0,
-            vertical: 100.0,
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Trajectory',
-                style: TextStyle(
-                  //fontFamily: 'OldEnglish',
-                  fontSize: 40,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+    return Container(
+      decoration: BoxDecoration(color: cardBackgroundColor),
+      child: Center(
+        child: Container(
+          width: 400,
+          child: DefaultTabController(
+            length: 2,
+            child: Scaffold(
+              backgroundColor: Colors.transparent,
+              body: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32.0,
+                  vertical: 100.0,
                 ),
-              ),
-              SizedBox(height: 20),
-              TabBar(
-                indicatorColor: Colors.tealAccent,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.grey,
-                tabs: [Tab(text: '一般登入'), Tab(text: '醫師登入')],
-              ),
-              Expanded(
-                child: TabBarView(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildLoginForm(context, '/memberScreen'),
-                    _buildLoginForm(context, '/managerScreen'),
+                    Text(
+                      'Trajectory',
+                      style: TextStyle(
+                        //fontFamily: 'OldEnglish',
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    TabBar(
+                      indicatorColor: Colors.tealAccent,
+                      labelColor: Colors.white,
+                      unselectedLabelColor: Colors.grey,
+                      tabs: [Tab(text: '一般登入'), Tab(text: '醫師登入')],
+                    ),
+                    Expanded(
+                      child: TabBarView(
+                        children: [
+                          _buildLoginForm(context, '/memberScreen'),
+                          _buildLoginForm(context, '/managerScreen'),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),

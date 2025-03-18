@@ -72,6 +72,7 @@ Row _buildPage(
 
 AppBar _appBar() {
   return AppBar(
+    automaticallyImplyLeading: false,
     title: Padding(
       padding: const EdgeInsets.only(left: 25),
       child: Text(
