@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Test NIfTI + MongoDB</title>
+</head>
+<body>
+  <h2>上傳 NIfTI 檔並存三張切片到 MongoDB</h2>
+  <input type="file" id="niiFile" accept=".nii,.nii.gz" />
+  <button onclick="uploadNii()">上傳並存檔</button>
+
+  <h2>查詢三張切片</h2>
+  <input type="text" id="docId" placeholder="輸入document_id" />
+  <button onclick="getSlices()">查詢並顯示</button>
+
+  <div>
+    <h3>顯示結果</h3>
+    <p>Sagittal:</p>
+    <img id="sagImg" style="max-width:200px;" />
+    <p>Coronal:</p>
+    <img id="corImg" style="max-width:200px;" />
+    <p>Axial:</p>
+    <img id="axiImg" style="max-width:200px;" />
+  </div>
+
+<script>
+async function uploadNii() {
+  const fileEl = document.getElementById("niiFile");
+  if (!fileEl.files.length) {
+    alert("請選擇 NIfTI 檔");
+    return;
+  }
+  const file = fileEl.files[0];
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const res = await fetch("http://127.0.0.1:8000/upload_nii/", {
+      method: "POST",
+      body: formData
+    });
+    const result = await res.json();
+    console.log("上傳並存檔回傳:", result);
+    if (result.error) {
+      alert("錯誤:" + result.error);
+    } else {
+      alert("文件已存入DB, doc_id = " + result.document_id);
+    }
+  } catch (err) {
+    alert("請求失敗: " + err);
+  }
+}
+
+async function getSlices() {
+  const docId = document.getElementById("docId").value.trim();
+  if (!docId) {
+    alert("請輸入doc_id");
+    return;
+  }
+  try {
+    const res = await fetch("http://127.0.0.1:8000/get_slices/" + docId);
+    const result = await res.json();
+    console.log("查詢回傳:", result);
+
+    if (result.error) {
+      alert("錯誤: " + result.error);
+      return;
+    }
+    document.getElementById("sagImg").src = "data:image/png;base64," + result.sagittal_b64;
+    document.getElementById("corImg").src = "data:image/png;base64," + result.coronal_b64;
+    document.getElementById("axiImg").src = "data:image/png;base64," + result.axial_b64;
+  } catch (err) {
+    alert("請求失敗: " + err);
+  }
+}
+</script>
+</body>
+</html>
