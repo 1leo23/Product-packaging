@@ -1,77 +1,78 @@
-from fastapi import APIRouter, Body, Request, Response, HTTPException, status
-from fastapi.encoders import jsonable_encoder
-from typing import List
+from fastapi import APIRouter, HTTPException
+from models import Member, LoginRequest, MemberQuery, UpdatePasswordRequest
+from pymongo import MongoClient
+from dotenv import load_dotenv
+import os
 
-from models import Member, MemberUpdate
+# 載入 .env 環境變數
+load_dotenv()
+MONGO_URI = os.getenv("MONGO_URI")
+DATABASE_NAME = os.getenv("DATABASE_NAME")
+COLLECTION_NAME = os.getenv("COLLECTION_NAME")
 
+# 連接 MongoDB
+client = MongoClient(MONGO_URI)
+db = client[DATABASE_NAME]
+collection = db[COLLECTION_NAME]
+
+# 創建 FastAPI 路由
 router = APIRouter()
 
+# 1️⃣ 註冊會員
+@router.post("/member/register")
+def register_member(member: Member):
+    if collection.find_one({"id": member.id}):
+        raise HTTPException(status_code=400, detail="該身份證字號已被註冊")
 
-@router.post("/", response_description="Create a new account", status_code=status.HTTP_201_CREATED, response_model=Member)
-def create_member(request: Request, member: Member = Body(...)):
-    # 檢查帳號是否已存在
-    existing_member = request.app.database["member_data"].find_one(
-        {"account": member.account}
-    )
-    if existing_member:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Account already exists")
+    birthdate = f"{member.yyyy}{member.mm:02d}{member.dd:02d}"
+    member_data = {
+        "id": member.id,
+        "sex": member.sex,
+        "name": member.name,
+        "password": birthdate,  # 預設密碼
+        "birthdate": birthdate
+    }
 
-    # 新增會員
-    member = jsonable_encoder(member)
-    new_member = request.app.database["member_data"].insert_one(member)
-    created_member = request.app.database["member_data"].find_one(
-        {"_id": new_member.inserted_id}
-    )
+    collection.insert_one(member_data)
+    return {"message": "註冊成功", "default_password": birthdate}
 
-    return created_member
+# 2️⃣ 會員登入
+@router.post("/member/signup")
+def member_login(login_data: LoginRequest):
+    user = collection.find_one({"id": login_data.id})
+    
+    if not user or user["password"] != login_data.password:
+        raise HTTPException(status_code=401, detail="帳號或密碼錯誤")
+    
+    return {"message": "登入成功"}
 
+# 3️⃣ 獲取會員資訊
+@router.post("/member/info")
+def get_member_info(query: MemberQuery):
+    user = collection.find_one({"id": query.id}, {"_id": 0, "password": 0})
 
-@router.get("/", response_description="List all member", response_model=List[Member])
-def list_memberships(request: Request):
-    books = list(request.app.database["member_data"].find(limit=100))
-    return books
+    if not user:
+        raise HTTPException(status_code=404, detail="找不到該會員")
+    
+    return user
 
+# 4️⃣ 變更密碼
+@router.put("/member/update_password")
+def update_password(request: UpdatePasswordRequest):
+    user = collection.find_one({"id": request.id})
 
-@router.get("/{account}", response_description="Get member by id", response_model=Member)
-def find_member(account: str, request: Request):
-    if (member := request.app.database["member_data"].find_one({"account": account})) is not None:
-        return member
+    if not user or user["password"] != request.old_password:
+        raise HTTPException(status_code=401, detail="舊密碼錯誤")
 
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"Member with account {account} not found")
+    collection.update_one({"id": request.id}, {"$set": {"password": request.new_password}})
+    return {"message": "密碼變更成功"}
 
+# 5️⃣ 登出 (僅作為 API 結構，實際應用應該在前端刪除 Token)
+@router.post("/member/logout")
+def logout_member(query: MemberQuery):
+    user = collection.find_one({"id": query.id})
 
-@router.patch("/{account}", response_description="Update member info", response_model=Member)
-def update_member(account: str, request: Request, member: MemberUpdate = Body(...)):
-    member = {k: v for k, v in member.dict().items() if v is not None}
+    if not user:
+        raise HTTPException(status_code=404, detail="找不到該會員")
 
-    if len(member) >= 1:
-        update_result = request.app.database["member_data"].update_one(
-            {"account": account}, {"$set": member}
-        )
-
-        if update_result.modified_count == 0:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=f"Member with ID {account} not found")
-
-    if (
-        existing_book := request.app.database["member_data"].find_one({"account": account})
-    ) is not None:
-        return existing_book
-
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"Member with ID {account} not found")
-
-
-@router.delete("/{account}", response_description="Delete account")
-def delete_member(account: str, request: Request, response: Response):
-    delete_result = request.app.database["member_data"].delete_one(
-        {"account": account})
-
-    if delete_result.deleted_count == 1:
-        response.status_code = status.HTTP_204_NO_CONTENT
-        return response
-
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"Member with ID {account} not found")
+    return {"message": "登出成功"}
