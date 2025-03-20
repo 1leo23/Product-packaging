@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_icon_shadow/flutter_icon_shadow.dart';
 import 'package:trajectory_app/cards/custom_card.dart';
 
 class RiskScoreCard extends StatefulWidget {
@@ -17,7 +18,7 @@ class _RiskScoreCard extends State<RiskScoreCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               '失智症風險',
               style: TextStyle(
                 fontSize: 20,
@@ -61,7 +62,14 @@ class _RiskScoreCard extends State<RiskScoreCard> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Expanded(flex: LEFT_FIEX, child: Container()),
-        Expanded(flex: 0, child: Icon(Icons.kitesurfing_outlined, size: 30)),
+        Expanded(
+          flex: 0,
+          child: IconShadow(
+            Icon(Icons.kitesurfing_outlined, size: 30),
+            shadowColor: Colors.black,
+            shadowOffset: Offset(2, 2),
+          ),
+        ),
         Expanded(flex: RIGHT_FIEX, child: Container()),
       ],
     );
