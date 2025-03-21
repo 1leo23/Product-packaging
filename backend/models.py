@@ -9,6 +9,9 @@ class Member(BaseModel):
     yyyy: int = Field(..., description="出生年 (西元)")
     mm: int = Field(..., ge=1, le=12, description="出生月 (1-12)")
     dd: int = Field(..., ge=1, le=31, description="出生日 (1-31)")
+##records: record = ...
+##class record: {腦齡 : int 、實際年齡 : int 、拍攝日期 : str(嘗試時間戳記) 、ImagePath : str}
+##宣告一個新的class叫record 
 
     @validator("id")
     def validate_id(cls, value):
