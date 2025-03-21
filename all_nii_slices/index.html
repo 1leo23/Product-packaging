@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>三方向多切片 Demo</title>
+  <style>
+    .plane-container {
+      margin: 20px 0;
+    }
+    .plane-container img {
+      max-width: 300px;
+      display: block;
+      border: 1px solid #888;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>上傳 NIfTI 並存三方向全部切片 (Sag/Cor/Axial)，前端以滾輪分別瀏覽</h1>
+  <div>
+    <h2>1. 上傳 NIfTI 檔 => 三方向切片</h2>
+    <input type="file" id="niiFile" accept=".nii,.nii.gz">
+    <button onclick="uploadNii3plane()">上傳並存檔</button>
+  </div>
+
+  <div>
+    <h2>2. 查詢三方向切片</h2>
+    <input type="text" id="docId" placeholder="輸入 document_id">
+    <button onclick="fetch3Plane()">載入</button>
+  </div>
+
+  <div id="threePlanes">
+    <!-- Sagittal  -->
+    <div class="plane-container" id="sagContainer">
+      <h3>Sagittal (index: <span id="sagIndexLabel"></span>)</h3>
+      <img id="sagImg" src="" />
+    </div>
+    <!-- Coronal -->
+    <div class="plane-container" id="corContainer">
+      <h3>Coronal (index: <span id="corIndexLabel"></span>)</h3>
+      <img id="corImg" src="" />
+    </div>
+    <!-- Axial -->
+    <div class="plane-container" id="axiContainer">
+      <h3>Axial (index: <span id="axiIndexLabel"></span>)</h3>
+      <img id="axiImg" src="" />
+    </div>
+  </div>
+
+<script>
+let sagList = [];
+let corList = [];
+let axiList = [];
+
+let sagIndex = 0;
+let corIndex = 0;
+let axiIndex = 0;
+
+async function uploadNii3plane() {
+  const fileInput = document.getElementById("niiFile");
+  if(!fileInput.files.length) {
+    alert("請選擇 NIfTI 檔");
+    return;
+  }
+  const file = fileInput.files[0];
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const res = await fetch("http://127.0.0.1:8000/upload_nii_3plane/", {
+      method: "POST",
+      body: formData
+    });
+    const result = await res.json();
+    console.log(result);
+    if(result.error) {
+      alert("錯誤: " + result.error);
+    } else {
+      alert(`document_id=${result.document_id}, 
+             sagittal=${result.num_slices.sagittal}, 
+             coronal=${result.num_slices.coronal}, 
+             axial=${result.num_slices.axial}`);
+    }
+  } catch(err) {
+    alert("請求失敗: " + err);
+  }
+}
+
+async function fetch3Plane() {
+  const docId = document.getElementById("docId").value.trim();
+  if(!docId) {
+    alert("請輸入 doc_id");
+    return;
+  }
+
+  try {
+    const res = await fetch("http://127.0.0.1:8000/get_3plane_slices/" + docId);
+    const result = await res.json();
+    console.log("後端回傳:", result);
+
+    if(result.error) {
+      alert("錯誤:" + result.error);
+      return;
+    }
+
+    sagList = result.Sagittal || [];
+    corList = result.Coronal || [];
+    axiList = result.Axial || [];
+    sagIndex = corIndex = axiIndex = 0;
+
+    // 分別顯示第一張
+    updateSagImg();
+    updateCorImg();
+    updateAxiImg();
+
+    alert(`三方向切片載入成功
+Sagittal=${sagList.length} 
+Coronal=${corList.length} 
+Axial=${axiList.length}`);
+  } catch(err) {
+    alert("請求失敗: " + err);
+  }
+}
+
+// 更新Sagittal圖
+function updateSagImg() {
+  if(sagList.length === 0) return;
+  if(sagIndex < 0) sagIndex = 0;
+  if(sagIndex >= sagList.length) sagIndex = sagList.length - 1;
+  const base64Str = sagList[sagIndex];
+  document.getElementById("sagImg").src = "data:image/png;base64," + base64Str;
+  document.getElementById("sagIndexLabel").innerText = `${sagIndex+1}/${sagList.length}`;
+}
+// 更新Coronal圖
+function updateCorImg() {
+  if(corList.length === 0) return;
+  if(corIndex < 0) corIndex = 0;
+  if(corIndex >= corList.length) corIndex = corList.length - 1;
+  const base64Str = corList[corIndex];
+  document.getElementById("corImg").src = "data:image/png;base64," + base64Str;
+  document.getElementById("corIndexLabel").innerText = `${corIndex+1}/${corList.length}`;
+}
+// 更新Axial圖
+function updateAxiImg() {
+  if(axiList.length === 0) return;
+  if(axiIndex < 0) axiIndex = 0;
+  if(axiIndex >= axiList.length) axiIndex = axiList.length - 1;
+  const base64Str = axiList[axiIndex];
+  document.getElementById("axiImg").src = "data:image/png;base64," + base64Str;
+  document.getElementById("axiIndexLabel").innerText = `${axiIndex+1}/${axiList.length}`;
+}
+
+// 監聽各自容器的wheel事件
+document.getElementById("sagContainer").addEventListener("wheel", e => {
+  if(sagList.length === 0) return;
+  e.preventDefault(); // 避免整頁捲動
+  if(e.deltaY < 0) sagIndex--;
+  else sagIndex++;
+  updateSagImg();
+});
+document.getElementById("corContainer").addEventListener("wheel", e => {
+  if(corList.length === 0) return;
+  e.preventDefault();
+  if(e.deltaY < 0) corIndex--;
+  else corIndex++;
+  updateCorImg();
+});
+document.getElementById("axiContainer").addEventListener("wheel", e => {
+  if(axiList.length === 0) return;
+  e.preventDefault();
+  if(e.deltaY < 0) axiIndex--;
+  else axiIndex++;
+  updateAxiImg();
+});
+</script>
+</body>
+</html>
