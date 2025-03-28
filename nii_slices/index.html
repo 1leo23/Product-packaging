@@ -1,79 +1,173 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Test NIfTI + MongoDB</title>
+  <meta charset="UTF-8" />
+  <title>NIfTI Slice Viewer with Mouse Wheel</title>
+  <style>
+    .plane-container {
+      margin: 20px;
+    }
+    .plane-container img {
+      max-width: 300px;
+      border: 1px solid #ccc;
+      display: block;
+    }
+  </style>
 </head>
 <body>
-  <h2>上傳 NIfTI 檔並存三張切片到 MongoDB</h2>
+  <h1>NIfTI 切片檢視器</h1>
+  
+  <!-- 上傳區段 -->
+  <h2>上傳 NIfTI 檔 (PNG 存本地)</h2>
   <input type="file" id="niiFile" accept=".nii,.nii.gz" />
   <button onclick="uploadNii()">上傳並存檔</button>
-
-  <h2>查詢三張切片</h2>
-  <input type="text" id="docId" placeholder="輸入document_id" />
-  <button onclick="getSlices()">查詢並顯示</button>
-
-  <div>
-    <h3>顯示結果</h3>
-    <p>Sagittal:</p>
-    <img id="sagImg" style="max-width:200px;" />
-    <p>Coronal:</p>
-    <img id="corImg" style="max-width:200px;" />
-    <p>Axial:</p>
-    <img id="axiImg" style="max-width:200px;" />
+  <div id="uploadStatus"></div>
+  
+  <!-- 載入資料 -->
+  <h2>載入切片</h2>
+  <input type="text" id="docId" placeholder="輸入 document_id" />
+  <button onclick="loadInitialSlices()">載入初始切片 (索引0)</button>
+  
+  <!-- 顯示三方向切片 -->
+  <div class="plane-container" id="sagContainer">
+    <h3>Sagittal 切片 (索引：<span id="sagIndexDisplay">0</span>)</h3>
+    <img id="sagImg" src="" alt="Sagittal Image" />
   </div>
-
-<script>
-async function uploadNii() {
-  const fileEl = document.getElementById("niiFile");
-  if (!fileEl.files.length) {
-    alert("請選擇 NIfTI 檔");
-    return;
-  }
-  const file = fileEl.files[0];
-
-  const formData = new FormData();
-  formData.append("file", file);
-
-  try {
-    const res = await fetch("http://127.0.0.1:8000/upload_nii/", {
-      method: "POST",
-      body: formData
+  
+  <div class="plane-container" id="corContainer">
+    <h3>Coronal 切片 (索引：<span id="corIndexDisplay">0</span>)</h3>
+    <img id="corImg" src="" alt="Coronal Image" />
+  </div>
+  
+  <div class="plane-container" id="axiContainer">
+    <h3>Axial 切片 (索引：<span id="axiIndexDisplay">0</span>)</h3>
+    <img id="axiImg" src="" alt="Axial Image" />
+  </div>
+  
+  <script>
+    let docId = "";
+    let sagIndex = 0;
+    let corIndex = 0;
+    let axiIndex = 0;
+    
+    // 上傳 NIfTI 檔，呼叫後端 /upload_nii_png_local
+    async function uploadNii() {
+      const fileEl = document.getElementById("niiFile");
+      if (!fileEl.files.length) {
+        alert("請選擇 NIfTI 檔案");
+        return;
+      }
+      const file = fileEl.files[0];
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      try {
+        const response = await fetch("http://127.0.0.1:8000/upload_nii_png_local", {
+          method: "POST",
+          body: formData
+        });
+        const result = await response.json();
+        if (result.error) {
+          document.getElementById("uploadStatus").innerText = "上傳錯誤: " + result.error;
+        } else {
+          docId = result.document_id;
+          document.getElementById("uploadStatus").innerText = 
+            `上傳成功, doc_id: ${docId}, folder: ${result.folderPath}`;
+          document.getElementById("docId").value = docId;
+          // 初始化索引
+          sagIndex = 0; corIndex = 0; axiIndex = 0;
+          document.getElementById("sagIndexDisplay").innerText = sagIndex;
+          document.getElementById("corIndexDisplay").innerText = corIndex;
+          document.getElementById("axiIndexDisplay").innerText = axiIndex;
+          // 載入初始切片
+          loadSlice("Sagittal", sagIndex);
+          loadSlice("Coronal", corIndex);
+          loadSlice("Axial", axiIndex);
+        }
+      } catch (err) {
+        alert("上傳請求失敗: " + err);
+      }
+    }
+    
+    // 載入某一方向、指定 index 的切片 (透過 /get_slice_url)
+    async function loadSlice(plane, index) {
+      if (!docId) {
+        console.error("docId 尚未設定");
+        return;
+      }
+      // 後端 API 回傳 URL 格式 (例如：http://127.0.0.1:8000/files/{folderName}/{plane}/sag_{index}.png)
+      const url = `http://127.0.0.1:8000/get_slice_url/${docId}?plane=${plane}&index=${index}`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.error) {
+          console.error("載入切片錯誤: " + data.error);
+          return;
+        }
+        if (plane === "Sagittal") {
+          document.getElementById("sagImg").src = data.url;
+        } else if (plane === "Coronal") {
+          document.getElementById("corImg").src = data.url;
+        } else if (plane === "Axial") {
+          document.getElementById("axiImg").src = data.url;
+        }
+      } catch (err) {
+        console.error("loadSlice 發生錯誤:", err);
+      }
+    }
+    
+    // 載入初始切片：將所有方向的索引設為 0
+    function loadInitialSlices() {
+      docId = document.getElementById("docId").value.trim();
+      if (!docId) {
+        alert("請輸入 doc_id");
+        return;
+      }
+      sagIndex = 0; corIndex = 0; axiIndex = 0;
+      document.getElementById("sagIndexDisplay").innerText = sagIndex;
+      document.getElementById("corIndexDisplay").innerText = corIndex;
+      document.getElementById("axiIndexDisplay").innerText = axiIndex;
+      loadSlice("Sagittal", sagIndex);
+      loadSlice("Coronal", corIndex);
+      loadSlice("Axial", axiIndex);
+    }
+    
+    // 為每個 <img> 加入滑鼠滾輪事件，當懸停於圖片上時直接切換該圖片的切片 index
+    document.getElementById("sagImg").addEventListener("wheel", function(e) {
+      e.preventDefault(); // 避免整頁滾動
+      if(e.deltaY < 0) {
+        sagIndex--;
+      } else {
+        sagIndex++;
+      }
+      if (sagIndex < 0) sagIndex = 0;
+      document.getElementById("sagIndexDisplay").innerText = sagIndex;
+      loadSlice("Sagittal", sagIndex);
     });
-    const result = await res.json();
-    console.log("上傳並存檔回傳:", result);
-    if (result.error) {
-      alert("錯誤:" + result.error);
-    } else {
-      alert("文件已存入DB, doc_id = " + result.document_id);
-    }
-  } catch (err) {
-    alert("請求失敗: " + err);
-  }
-}
-
-async function getSlices() {
-  const docId = document.getElementById("docId").value.trim();
-  if (!docId) {
-    alert("請輸入doc_id");
-    return;
-  }
-  try {
-    const res = await fetch("http://127.0.0.1:8000/get_slices/" + docId);
-    const result = await res.json();
-    console.log("查詢回傳:", result);
-
-    if (result.error) {
-      alert("錯誤: " + result.error);
-      return;
-    }
-    document.getElementById("sagImg").src = "data:image/png;base64," + result.sagittal_b64;
-    document.getElementById("corImg").src = "data:image/png;base64," + result.coronal_b64;
-    document.getElementById("axiImg").src = "data:image/png;base64," + result.axial_b64;
-  } catch (err) {
-    alert("請求失敗: " + err);
-  }
-}
-</script>
+    
+    document.getElementById("corImg").addEventListener("wheel", function(e) {
+      e.preventDefault();
+      if(e.deltaY < 0) {
+        corIndex--;
+      } else {
+        corIndex++;
+      }
+      if (corIndex < 0) corIndex = 0;
+      document.getElementById("corIndexDisplay").innerText = corIndex;
+      loadSlice("Coronal", corIndex);
+    });
+    
+    document.getElementById("axiImg").addEventListener("wheel", function(e) {
+      e.preventDefault();
+      if(e.deltaY < 0) {
+        axiIndex--;
+      } else {
+        axiIndex++;
+      }
+      if (axiIndex < 0) axiIndex = 0;
+      document.getElementById("axiIndexDisplay").innerText = axiIndex;
+      loadSlice("Axial", axiIndex);
+    });
+  </script>
 </body>
 </html>
