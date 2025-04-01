@@ -7,3 +7,4 @@ const backgroundColor = Color(0xFF15131C);
 const selectionColor = Color(0xFF88B2AC);
 const appBarColor = Color.fromARGB(255, 18, 19, 24);
 const defaultPadding = 20.0;
+const backendUrl = 'http://127.0.0.1:8080';

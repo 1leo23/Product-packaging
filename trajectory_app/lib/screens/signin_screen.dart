@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:trajectory_app/const/constant.dart';
+import 'package:trajectory_app/services/auth_service.dart';
 
 class SigninScreen extends StatelessWidget {
   const SigninScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(color: cardBackgroundColor),
-      child: Center(
-        child: Container(
+      decoration: const BoxDecoration(color: cardBackgroundColor),
+      child: const Center(
+        child: SizedBox(
           width: 400,
           child: DefaultTabController(
             length: 2,
             child: Scaffold(
               backgroundColor: Colors.transparent,
               body: Padding(
-                padding: const EdgeInsets.symmetric(
+                padding: EdgeInsets.symmetric(
                   horizontal: 32.0,
                   vertical: 100.0,
                 ),
@@ -41,8 +43,8 @@ class SigninScreen extends StatelessWidget {
                     Expanded(
                       child: TabBarView(
                         children: [
-                          _buildLoginForm(context, '/memberScreen'),
-                          _buildLoginForm(context, '/managerScreen'),
+                          SigninForm(role: 'member', route: '/memberScreen'),
+                          SigninForm(role: 'manager', route: '/managerScreen'),
                         ],
                       ),
                     ),
@@ -55,50 +57,116 @@ class SigninScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildLoginForm(BuildContext context, String route) {
+class SigninForm extends StatefulWidget {
+  final String role;
+  final String route;
+  const SigninForm({super.key, required this.role, required this.route});
+  @override
+  State<SigninForm> createState() => _SigninFormState();
+}
+
+class _SigninFormState extends State<SigninForm> {
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  Future<void> _handleSignin() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (username.isEmpty || password.isEmpty) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = '帳號與密碼不得為空';
+      });
+      return;
+    }
+
+    try {
+      final response = await AuthService.signin(
+        username,
+        password,
+        widget.role,
+      );
+      if (response == true) {
+        Navigator.pushNamed(context, widget.route);
+      } else {
+        setState(() {
+          _errorMessage = "帳號或密碼錯誤";
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
       child: Column(
         children: [
           TextField(
+            controller: _usernameController,
             cursorColor: Colors.tealAccent, // 修改游標顏色
             decoration: InputDecoration(
               hintText: '帳號',
-              hintStyle: TextStyle(color: Colors.grey),
+              hintStyle: const TextStyle(color: Colors.grey),
               filled: true,
               fillColor: cardBackgroundColor,
-
               border: OutlineInputBorder(
-                borderSide: BorderSide(
+                borderSide: const BorderSide(
                   color: Colors.tealAccent,
                   width: 2.0,
                 ), // 修改點選時的邊框顏色
                 borderRadius: BorderRadius.circular(8.0),
               ),
             ),
-            style: TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.white),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           TextField(
+            controller: _passwordController,
             cursorColor: Colors.tealAccent, // 修改游標顏色
             obscureText: true,
             decoration: InputDecoration(
               hintText: '密碼',
-              hintStyle: TextStyle(color: Colors.grey),
+              hintStyle: const TextStyle(color: Colors.grey),
               filled: true,
               fillColor: cardBackgroundColor,
               border: OutlineInputBorder(
-                borderSide: BorderSide(
+                borderSide: const BorderSide(
                   color: Colors.tealAccent,
                   width: 2.0,
                 ), // 修改點選時的邊框顏色
                 borderRadius: BorderRadius.circular(8.0),
               ),
             ),
-            style: TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.white),
           ),
-          SizedBox(height: 24),
+          const SizedBox(height: 16),
+          /* 錯誤訊息檢查 */
+          if (_errorMessage != null)
+            Text(
+              _errorMessage!,
+              style: const TextStyle(color: Colors.red, fontSize: 14),
+            ),
+          const SizedBox(height: 16),
+          /* 錯誤訊息檢查 */
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -108,14 +176,14 @@ class SigninScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8.0),
                 ),
               ),
-              onPressed: () {
-                //登入事件
-                Navigator.pushNamed(context, route);
-              },
-              child: Text(
-                '登入',
-                style: TextStyle(fontSize: 18, color: Colors.white),
-              ),
+              onPressed: _isLoading ? null : () => _handleSignin(),
+              child:
+                  _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                        '登入',
+                        style: TextStyle(fontSize: 18, color: Colors.white),
+                      ),
             ),
           ),
         ],

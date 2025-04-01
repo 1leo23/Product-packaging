@@ -6,11 +6,11 @@ class UploadFormWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
+    return const Align(
       alignment: Alignment.topCenter,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
-        child: Container(child: const Column(children: [UploadFormCard()])),
+        padding: EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+        child: Column(children: [UploadFormCard()]),
       ),
     );
   }

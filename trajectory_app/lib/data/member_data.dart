@@ -1,7 +1,8 @@
 import 'package:trajectory_app/models/member_model.dart';
+import 'package:trajectory_app/services/api_service.dart';
 
-class MemberData {
-  final memberList = const <MemberModel>[
+class MemberData {}
+/*
     MemberModel(
       id: "A11200938",
       sex: '男',
@@ -20,5 +21,4 @@ class MemberData {
       dd: '8',
       numRecords: '5',
     ),
-  ];
-}
+ */

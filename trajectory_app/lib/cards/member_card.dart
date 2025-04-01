@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:trajectory_app/cards/custom_card.dart';
 import 'package:trajectory_app/const/constant.dart';
 import 'package:trajectory_app/data/member_data.dart';
+import 'package:trajectory_app/models/member_model.dart';
 
 class MemberCard extends StatelessWidget {
   final int index;
-  final MemberData data;
-  const MemberCard({super.key, required this.index, required this.data});
+  final List<MemberModel> memberList;
+  const MemberCard({super.key, required this.index, required this.memberList});
   @override
   Widget build(BuildContext context) {
     return CustomCard(
@@ -28,13 +29,13 @@ class MemberCard extends StatelessWidget {
                   width: 2, // 邊框寬度
                 ),
               ),
-              child: CircleAvatar(
+              child: const CircleAvatar(
                 radius: 64, // 內部頭像略小於容器，以顯示邊框
                 backgroundColor: Colors.transparent,
                 backgroundImage: AssetImage('/assets/images/avatar.png'),
               ),
             ),
-            SizedBox(width: 16),
+            const SizedBox(width: 16),
             // 文字資訊
             Expanded(
               child: Column(
@@ -46,8 +47,8 @@ class MemberCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          data.memberList[index].name,
-                          style: TextStyle(
+                          memberList[index].name,
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -60,7 +61,7 @@ class MemberCard extends StatelessWidget {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(5.0),
                             ),
-                            padding: EdgeInsets.symmetric(
+                            padding: const EdgeInsets.symmetric(
                               vertical: 1.0,
                               horizontal: 16.0,
                             ),
@@ -68,7 +69,7 @@ class MemberCard extends StatelessWidget {
                           onPressed: () {
                             Navigator.pushNamed(context, '/memberScreen');
                           },
-                          child: Text(
+                          child: const Text(
                             '選擇',
                             style: TextStyle(color: Colors.white, fontSize: 16),
                           ),
@@ -76,17 +77,17 @@ class MemberCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Divider(
+                  const Divider(
                     // 分隔線
                     color: selectionColor, // 直線顏色
                     thickness: 1.5, // 直線粗細
                   ),
-                  _buildInfoRow('身份證字號', data.memberList[index].id),
+                  _buildInfoRow('身份證字號', memberList[index].id),
                   _buildInfoRow(
                     '出生年月日',
-                    '${data.memberList[index].yyyy}/${data.memberList[index].mm}/${data.memberList[index].dd}',
+                    '${memberList[index].yyyy}/${memberList[index].mm}/${memberList[index].dd}',
                   ),
-                  _buildInfoRow('性別', data.memberList[index].sex),
+                  _buildInfoRow('性別', memberList[index].sex),
                   _buildInfoRow('影像紀錄', '5'),
                 ],
               ),
@@ -105,7 +106,7 @@ class MemberCard extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               color: Colors.white54,
               fontWeight: FontWeight.w500,
               fontSize: 16,
@@ -113,7 +114,7 @@ class MemberCard extends StatelessWidget {
           ),
           Text(
             value,
-            style: TextStyle(
+            style: const TextStyle(
               color: Colors.white70,
               fontWeight: FontWeight.w500,
               fontSize: 16,

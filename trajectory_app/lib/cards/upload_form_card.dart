@@ -14,7 +14,7 @@ class UploadFormCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               '上傳影像',
               style: TextStyle(
                 fontSize: 20,

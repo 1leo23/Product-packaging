@@ -7,9 +7,9 @@ class ReportsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
+    return const SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+        padding: EdgeInsets.symmetric(horizontal: 18, vertical: 20),
         child: Column(
           children: [RiskScoreCard(), SizedBox(height: 18), LineChartCard()],
         ),

@@ -16,6 +16,8 @@ dependencies:
   cupertino_icons: ^1.0.8 
   syncfusion_flutter_sliders: ^28.2.11 # https://pub.dev/packages/syncfusion_flutter_sliders/install
   flutter_icon_shadow: ^2.0.7 # https://pub.dev/packages/flutter_icon_shadow/install
+  http: ^1.3.0
+  shared_preferences: ^2.5.3
 
 
 dev_dependencies:

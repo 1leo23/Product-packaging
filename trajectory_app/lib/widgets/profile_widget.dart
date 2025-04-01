@@ -18,13 +18,13 @@ class ProfileWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.only(left: 15, right: 15, top: 50),
+      padding: const EdgeInsets.only(left: 15, right: 15, top: 50),
       color: backgroundColor, // 深色背景
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SizedBox(height: 20),
-          Text(
+          const SizedBox(height: 20),
+          const Text(
             '個人檔案',
             style: TextStyle(
               color: Colors.white,
@@ -47,7 +47,7 @@ class ProfileWidget extends StatelessWidget {
                 width: 2, // 邊框寬度
               ),
             ),
-            child: CircleAvatar(
+            child: const CircleAvatar(
               radius: 64, // 內部頭像略小於容器，以顯示邊框
               backgroundColor: Colors.transparent,
               backgroundImage: AssetImage('/assets/images/avatar.png'),
@@ -67,13 +67,13 @@ Column _userInfo(MemberModel member) {
     children: [
       Text(
         member.name,
-        style: TextStyle(
+        style: const TextStyle(
           color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
       ),
-      Divider(
+      const Divider(
         // 分隔線
         color: selectionColor, // 直線顏色
         thickness: 1.0, // 直線粗細
@@ -84,7 +84,7 @@ Column _userInfo(MemberModel member) {
       _buildInfoRow('出生日期', '${member.yyyy}/${member.mm}/${member.dd}'),
       _buildInfoRow('性別', member.sex),
       _buildInfoRow('影像紀錄', member.numRecords),
-      Divider(
+      const Divider(
         color: selectionColor, // 直線顏色
         thickness: 1.0, // 直線粗細
         indent: 10.0, // 左側縮進
@@ -99,13 +99,13 @@ Column _managerInfo(ManagerModel manager) {
     children: [
       Text(
         manager.name,
-        style: TextStyle(
+        style: const TextStyle(
           color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
       ),
-      Divider(
+      const Divider(
         // 分隔線
         color: selectionColor, // 直線顏色
         thickness: 1.0, // 直線粗細
@@ -115,7 +115,7 @@ Column _managerInfo(ManagerModel manager) {
       _buildInfoRow('編號', manager.id),
       _buildInfoRow('科別', manager.department),
       _buildInfoRow('成員人數', manager.numMembers),
-      Divider(
+      const Divider(
         color: selectionColor, // 直線顏色
         thickness: 1.0, // 直線粗細
         indent: 10.0, // 左側縮進
@@ -133,7 +133,7 @@ Widget _buildInfoRow(String label, String value) {
       children: [
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             color: Colors.white54,
             fontWeight: FontWeight.w500,
             fontSize: 16,
@@ -141,7 +141,7 @@ Widget _buildInfoRow(String label, String value) {
         ),
         Text(
           value,
-          style: TextStyle(
+          style: const TextStyle(
             color: Colors.white70,
             fontWeight: FontWeight.w500,
             fontSize: 16,

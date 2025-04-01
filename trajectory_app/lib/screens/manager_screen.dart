@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:trajectory_app/const/constant.dart';
+import 'package:trajectory_app/models/manager_model.dart';
+import 'package:trajectory_app/services/api_service.dart';
+import 'package:trajectory_app/services/auth_service.dart';
 import 'package:trajectory_app/widgets/add_member_widget.dart';
 import 'package:trajectory_app/widgets/member_list_widget.dart';
 import 'package:trajectory_app/widgets/profile_widget.dart';
@@ -17,7 +20,9 @@ class _ManagerScreenState extends State<ManagerScreen> {
   int _selectedIndex = 0;
   void onMenuTap(int index) {
     setState(() {
+      // 登出
       if (index == 3) {
+        AuthService.logout();
         Navigator.pop(context);
         return;
       }
@@ -26,15 +31,33 @@ class _ManagerScreenState extends State<ManagerScreen> {
   }
 
   final mainWidgetList = <Widget>[
-    MemberListWidget(),
-    UploadFormWidget(),
-    AddMemberWidget(),
+    const MemberListWidget(),
+    const UploadFormWidget(),
+    const AddMemberWidget(),
   ];
-  final profileWidgetList = <Widget>[
-    ProfileWidget(type: 'manager'),
-    ProfileWidget(type: 'member'),
-    ProfileWidget(type: 'member'),
+  List<Widget> profileWidgetList = [
+    const ProfileWidget(type: 'manager'), // 成員管理頁
+    const ProfileWidget(type: 'member'), // 上傳影像頁
+    const ProfileWidget(type: 'member'), // 新增成員頁
   ];
+  void loadManagerInfo() async {
+    final managerModel = await ApiService.getManagerInfo();
+    setState(() {
+      // **這裡要重新建立 profileWidgetList，確保 UI 會更新**
+      profileWidgetList = [
+        ProfileWidget(type: 'manager', manager: managerModel), // **正確使用變數**
+        const ProfileWidget(type: 'member'),
+        const ProfileWidget(type: 'member'),
+      ];
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadManagerInfo(); // 在 initState() 內執行，只執行一次
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -73,8 +96,8 @@ Row _buildPage(
 AppBar _appBar() {
   return AppBar(
     automaticallyImplyLeading: false,
-    title: Padding(
-      padding: const EdgeInsets.only(left: 25),
+    title: const Padding(
+      padding: EdgeInsets.only(left: 25),
       child: Text(
         "Trajectory",
         style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
