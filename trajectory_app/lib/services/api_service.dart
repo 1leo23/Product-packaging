@@ -8,7 +8,7 @@ import 'package:trajectory_app/services/auth_service.dart'; // 儲存中小型�
 class ApiService {
   static const String baseUrl = backendUrl; // 你的後端 API 位址
 
-  // 登入方法
+  // 獲取醫生資訊
   static Future<ManagerModel> getManagerInfo() async {
     final url = Uri.parse('$baseUrl/manager/Info');
     final token = await AuthService.getToken();
@@ -30,8 +30,32 @@ class ApiService {
     } catch (e) {
       print("Exception: $e");
     }
-
     return const ManagerModel(); // 發生錯誤時回傳 null
+  }
+
+  // 獲取成員資訊
+  static Future<MemberModel> getMemberInfo(String memberId) async {
+    final url = Uri.parse('$baseUrl/member/Info?member_id=$memberId');
+    final token = await AuthService.getToken();
+
+    try {
+      final response = await http.post(
+        url,
+        body: jsonEncode({"token": token}),
+        headers: {"Content-Type": "application/json"},
+      );
+      if (response.statusCode == 200) {
+        // ✅ 確保 UTF-8 解析 JSON，防止亂碼
+        final utf8DecodedBody = utf8.decode(response.bodyBytes);
+        final Map<String, dynamic> data = jsonDecode(utf8DecodedBody);
+        return MemberModel.fromJson(data);
+      } else {
+        print("Error: ${response.statusCode} - ${response.body}");
+      }
+    } catch (e) {
+      print("Exception: $e");
+    }
+    return const MemberModel(); // 發生錯誤時回傳 null
   }
 
   static Future<bool> memberSignup(MemberModel memberModel) async {

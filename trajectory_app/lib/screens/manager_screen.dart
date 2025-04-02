@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:trajectory_app/const/constant.dart';
 import 'package:trajectory_app/models/manager_model.dart';
+import 'package:trajectory_app/models/member_model.dart';
 import 'package:trajectory_app/services/api_service.dart';
 import 'package:trajectory_app/services/auth_service.dart';
 import 'package:trajectory_app/widgets/add_member_widget.dart';
@@ -30,7 +31,7 @@ class _ManagerScreenState extends State<ManagerScreen> {
     });
   }
 
-  final mainWidgetList = <Widget>[
+  final List<Widget> mainWidgetList = [
     const MemberListWidget(),
     const UploadFormWidget(),
     const AddMemberWidget(),
@@ -43,12 +44,18 @@ class _ManagerScreenState extends State<ManagerScreen> {
   void loadManagerInfo() async {
     final managerModel = await ApiService.getManagerInfo();
     setState(() {
-      // **這裡要重新建立 profileWidgetList，確保 UI 會更新**
-      profileWidgetList = [
-        ProfileWidget(type: 'manager', manager: managerModel), // **正確使用變數**
-        const ProfileWidget(type: 'member'),
-        const ProfileWidget(type: 'member'),
-      ];
+      // 成員管理頁
+      profileWidgetList[0] = ProfileWidget(
+        type: 'manager',
+        manager: managerModel,
+      );
+    });
+  }
+
+  void updateMemberPreview(MemberModel memberModel) {
+    setState(() {
+      // 新增成員頁
+      profileWidgetList[2] = ProfileWidget(type: 'member', member: memberModel);
     });
   }
 
@@ -70,7 +77,7 @@ class _ManagerScreenState extends State<ManagerScreen> {
             selectedIndex: _selectedIndex,
             onMenuTap: onMenuTap,
           ),
-          mainWidgetList[_selectedIndex],
+          mainWidgetList![_selectedIndex],
           profileWidgetList[_selectedIndex],
         ),
       ),

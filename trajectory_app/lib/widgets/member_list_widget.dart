@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:trajectory_app/cards/member_card.dart';
-import 'package:trajectory_app/data/member_data.dart';
 import 'package:trajectory_app/models/member_model.dart';
 import 'package:trajectory_app/services/api_service.dart';
 

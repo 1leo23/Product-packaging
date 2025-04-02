@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:trajectory_app/cards/custom_card.dart';
 import 'package:trajectory_app/const/constant.dart';
-import 'package:trajectory_app/data/member_data.dart';
 import 'package:trajectory_app/models/member_model.dart';
 
 class MemberCard extends StatelessWidget {
@@ -21,7 +20,7 @@ class MemberCard extends StatelessWidget {
             Container(
               width: 130, // 直徑 = 2 * radius
               height: 130,
-              padding: EdgeInsets.all(5),
+              padding: const EdgeInsets.all(5),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
@@ -67,7 +66,11 @@ class MemberCard extends StatelessWidget {
                             ),
                           ),
                           onPressed: () {
-                            Navigator.pushNamed(context, '/memberScreen');
+                            Navigator.pushNamed(
+                              context,
+                              '/memberScreen',
+                              arguments: memberList[index].id,
+                            );
                           },
                           child: const Text(
                             '選擇',

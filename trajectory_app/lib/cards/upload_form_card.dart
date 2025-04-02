@@ -8,7 +8,7 @@ class UploadFormCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomCard(
-      width: 425,
+      width: 500,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 10),
         child: Column(
@@ -22,57 +22,68 @@ class UploadFormCard extends StatelessWidget {
                 color: Colors.white,
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             _buildInputRow('身份證字號', '身份證字號', true),
-            _buildInputRow('拍攝日期', '拍攝日期', true),
+            _buildInputRow('拍攝日期', 'YYYY/MM/DD', true),
             _buildInputRow('上傳檔案', '上傳檔案 nii.gz', true),
             _buildInputRow('實際年齡', '實際年齡 (自動填入)', false),
             _buildInputRow('腦部年齡', '腦部年齡 (AI計算)', false),
             _buildInputRow('失智症風險', '失智症風險 (AI計算)', false),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  flex: 3,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: selectionColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                    ),
-                    onPressed: () {},
-                    child: Text('AI計算', style: TextStyle(color: Colors.white)),
-                  ),
-                ),
-                SizedBox(width: 20),
-                Expanded(
-                  flex: 2,
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.white),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                    ),
-                    onPressed: () {},
-                    child: Text('送出', style: TextStyle(color: Colors.white)),
-                  ),
-                ),
+                Expanded(flex: 2, child: _buildButton('建檔', 2)),
+                const SizedBox(width: 5),
+                const Icon(Icons.double_arrow),
+                const SizedBox(width: 5),
+                Expanded(flex: 2, child: _buildButton('AI計算', 1)),
+                const SizedBox(width: 5),
+                const Icon(Icons.double_arrow),
+                const SizedBox(width: 5),
+                Expanded(flex: 2, child: _buildButton('儲存', 0)),
               ],
             ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
+    );
+  }
+
+  OutlinedButton _buildButton(String text, int status) {
+    // status   0:未處理    1:待處理    2:已處理
+    Color color;
+    VoidCallback? onPressed;
+
+    switch (status) {
+      case 0: // 未處理
+        color = Colors.grey;
+        onPressed = null;
+        break;
+      case 1: //待處理
+        color = Colors.white;
+        onPressed = () {};
+        break;
+      case 2: //已處理
+        text += "\u{2611}";
+        color = Colors.grey;
+        onPressed = null;
+        break;
+      default:
+        color = Colors.grey;
+        onPressed = null;
+        break;
+    }
+
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(color: color),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      ),
+      onPressed: onPressed,
+      child: Text(text, style: TextStyle(color: color)),
     );
   }
 }
@@ -83,13 +94,16 @@ Widget _buildInputRow(String label, String hint, bool enabled) {
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: Colors.white70, fontSize: 16)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 16),
+        ),
         SizedBox(
           height: 40,
-          width: 200,
+          width: 250,
           child: TextField(
             enabled: enabled,
-            style: TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
               filled: true,
               fillColor:
@@ -97,16 +111,16 @@ Widget _buildInputRow(String label, String hint, bool enabled) {
                       ? Colors.transparent
                       : const Color.fromARGB(255, 55, 56, 74),
               hintText: hint,
-              hintStyle: TextStyle(color: Colors.white54),
+              hintStyle: const TextStyle(color: Colors.white54),
               border: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.red),
+                borderSide: const BorderSide(color: Colors.red),
                 borderRadius: BorderRadius.circular(8.0),
               ),
               focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.white),
+                borderSide: const BorderSide(color: Colors.white),
                 borderRadius: BorderRadius.circular(8.0),
               ),
-              contentPadding: EdgeInsets.symmetric(
+              contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
                 vertical: 10,
               ),

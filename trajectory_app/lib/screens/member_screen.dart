@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:trajectory_app/const/constant.dart';
+import 'package:trajectory_app/models/member_model.dart';
+import 'package:trajectory_app/services/api_service.dart';
 import 'package:trajectory_app/widgets/profile_widget.dart';
 import 'package:trajectory_app/widgets/records_widget.dart';
 import 'package:trajectory_app/widgets/reports_widget.dart';
 import 'package:trajectory_app/widgets/side_menu_widget.dart';
 
 class MemberScreen extends StatefulWidget {
-  const MemberScreen({super.key});
+  final String memberId;
+  const MemberScreen({super.key, required this.memberId});
 
   @override
   State<MemberScreen> createState() => _MemberScreenState();
@@ -14,6 +17,7 @@ class MemberScreen extends StatefulWidget {
 
 class _MemberScreenState extends State<MemberScreen> {
   int _selectedIndex = 0;
+  ProfileWidget profileWidget = const ProfileWidget(type: 'member');
   void onMenuTap(int index) {
     setState(() {
       if (index == 3) {
@@ -24,7 +28,21 @@ class _MemberScreenState extends State<MemberScreen> {
     });
   }
 
-  final mainWidgetList = <Widget>[ReportsWidget(), RecordsWidget()];
+  void loadMemberInfo() async {
+    final memberModel = await ApiService.getMemberInfo(widget.memberId);
+    setState(() {
+      // **這裡要重新建立 profileWidgetList，確保 UI 會更新**
+      profileWidget = ProfileWidget(type: 'member', member: memberModel);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadMemberInfo(); // 在 initState() 內執行，只執行一次
+  }
+
+  final mainWidgetList = <Widget>[const ReportsWidget(), const RecordsWidget()];
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -38,7 +56,7 @@ class _MemberScreenState extends State<MemberScreen> {
             onMenuTap: onMenuTap,
           ),
           mainWidgetList[_selectedIndex],
-          ProfileWidget(type: 'member'),
+          profileWidget,
         ),
       ),
     );
@@ -63,8 +81,8 @@ Row _buildPage(
 AppBar _appBar() {
   return AppBar(
     automaticallyImplyLeading: false,
-    title: Padding(
-      padding: const EdgeInsets.only(left: 25),
+    title: const Padding(
+      padding: EdgeInsets.only(left: 25),
       child: Text(
         "Trajectory",
         style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),

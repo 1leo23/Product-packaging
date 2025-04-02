@@ -97,7 +97,14 @@ class _SigninFormState extends State<SigninForm> {
         widget.role,
       );
       if (response == true) {
-        Navigator.pushNamed(context, widget.route);
+        /******** 登入成功 *********/
+        widget.role == 'manager'
+            ? Navigator.pushNamed(context, '/managerScreen')
+            : Navigator.pushNamed(
+              context,
+              '/memberScreen',
+              arguments: _usernameController.text.trim(), // 傳遞 memberId
+            );
       } else {
         setState(() {
           _errorMessage = "帳號或密碼錯誤";

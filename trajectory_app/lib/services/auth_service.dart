@@ -25,9 +25,7 @@ class AuthService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       String token =
-          role == 'manager'
-              ? data["manager_token"]
-              : data["member_token"]; // 假設 API 回傳的 token 是這樣
+          role == 'manager' ? data["manager_token"] : data["member_token"];
       // 儲存 token
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('token', token);

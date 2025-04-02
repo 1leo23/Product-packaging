@@ -14,14 +14,15 @@ class _AddMemberCardState extends State<AddMemberCard> {
   final _nameController = TextEditingController();
   final _idController = TextEditingController();
   final _dateController = TextEditingController();
-
   final _sexController = TextEditingController();
+  final FocusNode _textFieldFocusNode = FocusNode(); // 創建 FocusNode
   @override
   void dispose() {
     _nameController.dispose();
     _idController.dispose();
     _dateController.dispose();
     _sexController.dispose();
+    _textFieldFocusNode.dispose();
     super.dispose();
   }
 
@@ -78,7 +79,43 @@ class _AddMemberCardState extends State<AddMemberCard> {
       ).showSnackBar(const SnackBar(content: Text('註冊失敗，請稍後再試')));
     }
   }
+
   /********************************* 送出表單 ****************************/
+  @override
+  void initState() {
+    super.initState();
+    // 監聽焦點變化
+    _textFieldFocusNode.addListener(() {
+      if (!_textFieldFocusNode.hasFocus) {
+        // 失去焦點時
+        setState(() {
+          String yyyy = '--';
+          String mm = '--';
+          String dd = '--';
+          if (_dateController.text.isNotEmpty) {
+            final dateParts = _dateController.text.split('/');
+            if (dateParts.length == 3) {
+              yyyy = dateParts[0];
+              mm = dateParts[1];
+              dd = dateParts[2];
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('日期格式錯誤，請使用 YYYY/MM/DD')),
+              );
+            }
+          }
+          final member = MemberModel(
+            name: _nameController.text,
+            id: _idController.text,
+            sex: _sexController.text,
+            yyyy: yyyy,
+            mm: mm,
+            dd: dd,
+          );
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -98,15 +135,34 @@ class _AddMemberCardState extends State<AddMemberCard> {
               ),
             ),
             const SizedBox(height: 16),
-            _buildInputRow('姓名', '姓名', true, controller: _nameController),
-            _buildInputRow('身份證字號', '身份證字號', true, controller: _idController),
+            _buildInputRow(
+              '姓名',
+              '姓名',
+              true,
+              controller: _nameController,
+              focusNode: _textFieldFocusNode,
+            ),
+            _buildInputRow(
+              '身份證字號',
+              '身份證字號',
+              true,
+              controller: _idController,
+              focusNode: _textFieldFocusNode,
+            ),
             _buildInputRow(
               '出生日期',
               'YYYY/MM/DD',
               true,
               controller: _dateController,
+              focusNode: _textFieldFocusNode,
             ),
-            _buildInputRow('性別', 'M/F', true, controller: _sexController),
+            _buildInputRow(
+              '性別',
+              'M/F',
+              true,
+              controller: _sexController,
+              focusNode: _textFieldFocusNode,
+            ),
             _buildInputRow('上傳照片', '上傳照片', true),
             const SizedBox(height: 16),
             Row(
@@ -148,6 +204,7 @@ Widget _buildInputRow(
   String hint,
   bool enabled, {
   TextEditingController? controller,
+  FocusNode? focusNode,
 }) {
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -162,6 +219,7 @@ Widget _buildInputRow(
           height: 40,
           width: 200,
           child: TextField(
+            focusNode: focusNode, // 綁定 FocusNode
             controller: controller,
             enabled: enabled,
             style: const TextStyle(color: Colors.white),

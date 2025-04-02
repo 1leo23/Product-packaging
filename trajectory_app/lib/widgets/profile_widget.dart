@@ -32,11 +32,11 @@ class ProfileWidget extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           Container(
             width: 180, // 直徑 = 2 * radius
             height: 180,
-            padding: EdgeInsets.all(5),
+            padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
@@ -53,7 +53,7 @@ class ProfileWidget extends StatelessWidget {
               backgroundImage: AssetImage('/assets/images/avatar.png'),
             ),
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
 
           type == 'manager' ? _managerInfo(manager) : _userInfo(member),
         ],
