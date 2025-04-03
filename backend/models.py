@@ -61,7 +61,7 @@ class MemberQuery(BaseModel):
 class Record(BaseModel):
     member_id: str
     date: str = Field(..., description="請輸入日期 (YYYYMMDD)")
-    image_path: str  # 存儲本地路徑
+    original_image_path: str  # 存儲本地路徑
     folder_path: str  # 存儲影像資料夾
     brain_age: Optional[int] = None
     actual_age: Optional[int] = None

@@ -204,26 +204,47 @@ def ai_calculation(image_path: str):
 BRAIN_IMAGE_DIR = r"C:\Users\User\Pictures\brain_image"
 os.makedirs(BRAIN_IMAGE_DIR, exist_ok=True)
 @router.post("/upload/Record")
-def upload_record(member_id: str = Form(...), date: str = Form(...), image_file: UploadFile = File(...)):
+def upload_record(
+    managerToken: str = Form(...),
+    member_id: str = Form(...),
+    date: str = Form(...),
+    image_file: UploadFile = File(...)
+):
+    # **驗證管理員 Token**
+    try:
+        manager_data = jwt.decode(managerToken, SECRET_KEY, algorithms=["HS256"])
+        manager_id = manager_data["id"]
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token 已過期")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="無效的 Token")
+
+    if not manager_collection.find_one({"id": manager_id}):
+        raise HTTPException(status_code=401, detail="無效的管理員 Token")
+
     # **確認成員是否存在**
     member = member_collection.find_one({"id": member_id})
     if not member:
         raise HTTPException(status_code=404, detail="找不到該成員")
 
-    # **轉換 date 格式**
-    if re.match(r"^\d{8}$", date):
-        date = datetime.datetime.strptime(date, "%Y%m%d").strftime("%Y/%m/%d")
+    # **取得 RecordList 數量**
+    record_count = member.get("record_count", 0) + 1  # 取得當前記錄數量，+1 表示新的記錄
 
-    # **儲存檔案**
+    # **檢查檔案格式**
     file_extension = image_file.filename.split(".")[-1]
-    if file_extension not in ["nii", "nii.gz"]:
+    if file_extension not in ["nii", "gz"]:
         raise HTTPException(status_code=400, detail="檔案格式錯誤，僅支援 .nii 和 .nii.gz")
 
-    member_folder = os.path.join(BRAIN_IMAGE_DIR, member_id)
+    # **設定 folder_path**
+    member_folder = os.path.join(BRAIN_IMAGE_DIR, f"{member_id}_{record_count}")
     os.makedirs(member_folder, exist_ok=True)
-    image_path = os.path.join(member_folder, f"original.{file_extension}")
-
-    with open(image_path, "wb") as buffer:
+    
+    # **儲存檔案**
+    if file_extension == "gz":
+        original_image_path = os.path.join(member_folder, "original.nii.gz")
+    else:
+        original_image_path = os.path.join(member_folder, "original.nii")
+    with open(original_image_path, "wb") as buffer:
         shutil.copyfileobj(image_file.file, buffer)
 
     # **計算實際年齡**
@@ -231,7 +252,7 @@ def upload_record(member_id: str = Form(...), date: str = Form(...), image_file:
     record = Record(
         member_id=member_id,
         date=date,
-        image_path=image_path,
+        original_image_path=original_image_path,
         folder_path=member_folder
     )
     record.compute_actual_age(birthdate)
@@ -239,7 +260,10 @@ def upload_record(member_id: str = Form(...), date: str = Form(...), image_file:
     # **存入資料庫**
     member_collection.update_one(
         {"id": member_id},
-        {"$push": {"RecordList": record.dict()}}
+        {
+            "$push": {"RecordList": record.dict()},
+            "$set": {"record_count": record_count}  # 更新 RecordList 記錄數量
+        }
     )
 
     return {"message": "成功上傳紀錄"}
