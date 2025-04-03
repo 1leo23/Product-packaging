@@ -65,7 +65,6 @@ class Record(BaseModel):
 
     @validator("date")
     def validate_and_format_date(cls, value):
-        """ 確保 date 是 'YYYY-MM-DD'，如果是 'YYYYMMDD' 會自動轉換 """
         try:
             if len(value) == 8 and value.isdigit():
                 return datetime.strptime(value, "%Y%m%d").strftime("%Y-%m-%d")

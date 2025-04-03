@@ -71,7 +71,6 @@ def member_signup(member: Member, manager_token: ManagerToken):
     member_data["managerID"] = manager_id
 
     manager_collection.update_one({"id": manager_id}, {"$inc": {"numMembers": 1}})
-    member_collection.insert_one(member_data)
 
     return {"message": "成員註冊成功", "default_password": member.password}
 
@@ -166,5 +165,16 @@ token_blacklist = set()
 def logout(token: str = Depends(oauth2_scheme)):
     # 將 Token 加入黑名單，讓它失效
     token_blacklist.add(token)
-    
     return {"message": "登出成功，Token 已失效"}
+
+# Token 驗證中間件
+def verify_token(token: str = Depends(oauth2_scheme)):
+    if token in token_blacklist:
+        raise HTTPException(status_code=401, detail="Token 已失效")
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token 已過期")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="無效的 Token")
