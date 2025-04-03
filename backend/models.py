@@ -10,7 +10,7 @@ class Member(BaseModel):
     id: str = Field(..., min_length=10, max_length=10, description="請輸入有效身份證字號")
     sex: str = Field(..., description="請輸入 M 或 F")
     name: str = Field(..., min_length=1, description="姓名不能為空")
-    birthdate: str = Field(..., description="出生日期 (YYYY/MM/DD)")
+    birthdate: str = Field(..., description="出生日期 (YYYYMMDD)")
     profile_image_path: Optional[str] = None  # 本地圖片路徑
     managerID: str = Field(..., description="註冊醫生 ID")
     password: Optional[str] = None  # 預設為出生年月日
@@ -29,16 +29,13 @@ class Member(BaseModel):
 
     @validator("birthdate")
     def validate_birthdate(cls, value):
-        try:
-            datetime.strptime(value, "%Y%m%d")
-        except ValueError:
+        if not re.match(r"^\d{8}$", value):
             raise ValueError("出生日期格式錯誤，應為 YYYYMMDD")
         return value
 
     def generate_password(self):
-        """ 生成密碼：格式為 yyyyMMdd """
-        birth_date = datetime.strptime(self.birthdate, "%Y/%m/%d")
-        self.password = f"{birth_date.year}{str(birth_date.month).zfill(2)}{str(birth_date.day).zfill(2)}"
+        """ 生成密碼：格式為 yyyymmdd """
+        self.password = self.birthdate
 
 ### 管理員 (Manager) 模型 ###
 class Manager(BaseModel):
@@ -61,14 +58,9 @@ class ManagerToken(BaseModel):
 class MemberQuery(BaseModel):
     id: str
 
-class UpdatePasswordRequest(BaseModel):
-    id: str
-    old_password: str
-    new_password: str
-
 class Record(BaseModel):
     member_id: str
-    date: str = Field(..., description="請輸入日期 (YYYY/MM/DD)")
+    date: str = Field(..., description="請輸入日期 (YYYYMMDD)")
     image_path: str  # 存儲本地路徑
     folder_path: str  # 存儲影像資料夾
     brain_age: Optional[int] = None
@@ -77,22 +69,19 @@ class Record(BaseModel):
 
     @validator("date")
     def validate_and_format_date(cls, value):
-        try:
-            if re.match(r"^\d{8}$", value):
-                return datetime.strptime(value, "%Y%m%d").strftime("%Y/%m/%d")
-            datetime.strptime(value, "%Y/%m/%d")  # 檢查格式是否正確
-            return value
-        except ValueError:
-            raise ValueError("日期格式錯誤，請輸入 'YYYYMMDD' 或 'YYYY/MM/DD'")
+        if not re.match(r"^\d{8}$", value):
+            raise ValueError("日期格式錯誤，請輸入 'YYYYMMDD'")
+        return value
 
     def compute_actual_age(self, birthdate: str):
         """ 計算實際年齡 """
-        birth_date = datetime.strptime(birthdate, "%Y/%m/%d").date()
-        record_date = datetime.strptime(self.date, "%Y/%m/%d").date()
+        birth_date = datetime.strptime(birthdate, "%Y%m%d").date()
+        record_date = datetime.strptime(self.date, "%Y%m%d").date()
         actual_age = record_date.year - birth_date.year - (
             (record_date.month, record_date.day) < (birth_date.month, birth_date.day)
         )
         self.actual_age = actual_age
+
 
 
 class MemberLoginResponse(BaseModel):

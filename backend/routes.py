@@ -1,12 +1,13 @@
 from fastapi import APIRouter, HTTPException, Depends, Form, UploadFile, File
 from fastapi.security import OAuth2PasswordBearer
-from models import Member, LoginRequest, MemberQuery, UpdatePasswordRequest, Manager, ManagerToken, Record
+from models import Member, LoginRequest, MemberQuery, Manager, ManagerToken, Record
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
 import jwt
 import datetime
 import shutil
+import re
 
 # 載入 .env 環境變數
 load_dotenv()
@@ -34,8 +35,8 @@ def create_jwt_token(data: dict, expires_delta: datetime.timedelta = datetime.ti
 
 ### 管理員註冊 ###
 # 本地存儲路徑
-PROFILE_DIR = r"C:\Users\User\Pictures\manager_profile"
-os.makedirs(PROFILE_DIR, exist_ok=True)
+MANAGER_PROFILE_DIR = r"C:\Users\User\Pictures\manager_profile"
+os.makedirs(MANAGER_PROFILE_DIR, exist_ok=True)
 
 # 管理員註冊
 @router.post("/manager/Manager_Signup")
@@ -51,7 +52,7 @@ def manager_signup(
         raise HTTPException(status_code=400, detail="該醫生編號已註冊")
 
     # 儲存圖片
-    profile_image_path = os.path.join(PROFILE_DIR, f"{id}.jpg")
+    profile_image_path = os.path.join(MANAGER_PROFILE_DIR, f"{id}.jpg")
     with open(profile_image_path, "wb") as buffer:
         shutil.copyfileobj(profile_image_file.file, buffer)
 
@@ -81,6 +82,8 @@ def manager_signin(signin_data: LoginRequest):
     return {"manager_token": manager_token, "message": f"{signin_data.id} 成功登入"}
 
 ### 會員註冊 ###
+MEMBER_PROFILE_DIR = r"C:\Users\User\Pictures\member_profile"
+os.makedirs(MEMBER_PROFILE_DIR, exist_ok=True)
 @router.post("/manager/Member_Signup")
 def member_signup(
     id: str = Form(...),
@@ -105,10 +108,6 @@ def member_signup(
     # **檢查會員是否已存在**
     if member_collection.find_one({"id": id}):
         raise HTTPException(status_code=400, detail="該身份證字號已被註冊")
-
-    # **轉換 birthdate 格式**
-    if re.match(r"^\d{8}$", birthdate):
-        birthdate = datetime.strptime(birthdate, "%Y%m%d").strftime("%Y/%m/%d")
 
     # **儲存圖片**
     profile_image_path = os.path.join(MEMBER_PROFILE_DIR, f"{id}.jpg")
@@ -202,6 +201,8 @@ def ai_calculation(image_path: str):
     return {"brainAge": 45, "riskScore": 5}
 
 # 上傳拍攝記錄
+BRAIN_IMAGE_DIR = r"C:\Users\User\Pictures\brain_image"
+os.makedirs(BRAIN_IMAGE_DIR, exist_ok=True)
 @router.post("/upload/Record")
 def upload_record(member_id: str = Form(...), date: str = Form(...), image_file: UploadFile = File(...)):
     # **確認成員是否存在**
@@ -211,7 +212,7 @@ def upload_record(member_id: str = Form(...), date: str = Form(...), image_file:
 
     # **轉換 date 格式**
     if re.match(r"^\d{8}$", date):
-        date = datetime.strptime(date, "%Y%m%d").strftime("%Y/%m/%d")
+        date = datetime.datetime.strptime(date, "%Y%m%d").strftime("%Y/%m/%d")
 
     # **儲存檔案**
     file_extension = image_file.filename.split(".")[-1]
