@@ -1,18 +1,19 @@
 from pydantic import BaseModel, Field, validator
+from fastapi import UploadFile
 import re
 from typing import List, Optional
 from datetime import datetime
+
 
 ### 會員 (Member) 模型 ###
 class Member(BaseModel):
     id: str = Field(..., min_length=10, max_length=10, description="請輸入有效身份證字號")
     sex: str = Field(..., description="請輸入 M 或 F")
     name: str = Field(..., min_length=1, description="姓名不能為空")
-    yyyy: int = Field(..., description="出生年 (西元)")
-    mm: int = Field(..., ge=1, le=12, description="出生月 (1-12)")
-    dd: int = Field(..., ge=1, le=31, description="出生日 (1-31)")
-    profile_image_path: str = Field(..., description="會員的個人照路徑")
-    password: Optional[str] = None  # 密碼預設為出生年月日
+    birthdate: str = Field(..., description="出生日期 (YYYY/MM/DD)")
+    profile_image_path: Optional[str] = None  # 本地圖片路徑
+    managerID: str = Field(..., description="註冊醫生 ID")
+    password: Optional[str] = None  # 預設為出生年月日
 
     @validator("id")
     def validate_id(cls, value):
@@ -26,9 +27,18 @@ class Member(BaseModel):
             raise ValueError("性別只能是 'M' 或 'F'")
         return value
 
+    @validator("birthdate")
+    def validate_birthdate(cls, value):
+        try:
+            datetime.strptime(value, "%Y%m%d")
+        except ValueError:
+            raise ValueError("出生日期格式錯誤，應為 YYYYMMDD")
+        return value
+
     def generate_password(self):
         """ 生成密碼：格式為 yyyyMMdd """
-        self.password = f"{self.yyyy}{str(self.mm).zfill(2)}{str(self.dd).zfill(2)}"
+        birth_date = datetime.strptime(self.birthdate, "%Y/%m/%d")
+        self.password = f"{birth_date.year}{str(birth_date.month).zfill(2)}{str(birth_date.day).zfill(2)}"
 
 ### 管理員 (Manager) 模型 ###
 class Manager(BaseModel):
@@ -38,6 +48,7 @@ class Manager(BaseModel):
     name: str = Field(..., min_length=1, description="姓名不能為空")
     profile_image_path: str = Field(..., description="醫生的個人照路徑")
     numMembers: int = Field(default=0, description="患者人數")
+
 
 ### 登入請求模型 ###
 class LoginRequest(BaseModel):
@@ -57,26 +68,27 @@ class UpdatePasswordRequest(BaseModel):
 
 class Record(BaseModel):
     member_id: str
+    date: str = Field(..., description="請輸入日期 (YYYY/MM/DD)")
+    image_path: str  # 存儲本地路徑
+    folder_path: str  # 存儲影像資料夾
     brain_age: Optional[int] = None
-    actual_age: Optional[int] = None  # 讓 actual_age 自動計算
-    date: str = Field(..., description="請輸入日期 (YYYY-MM-DD)")
-    image_path: str
+    actual_age: Optional[int] = None
     risk_score: Optional[int] = 0
 
     @validator("date")
     def validate_and_format_date(cls, value):
         try:
-            if len(value) == 8 and value.isdigit():
-                return datetime.strptime(value, "%Y%m%d").strftime("%Y-%m-%d")
-            datetime.strptime(value, "%Y-%m-%d")  # 檢查格式是否正確
+            if re.match(r"^\d{8}$", value):
+                return datetime.strptime(value, "%Y%m%d").strftime("%Y/%m/%d")
+            datetime.strptime(value, "%Y/%m/%d")  # 檢查格式是否正確
             return value
         except ValueError:
-            raise ValueError("日期格式錯誤，請輸入 'YYYY-MM-DD' 或 'YYYYMMDD'")
+            raise ValueError("日期格式錯誤，請輸入 'YYYYMMDD' 或 'YYYY/MM/DD'")
 
     def compute_actual_age(self, birthdate: str):
         """ 計算實際年齡 """
-        birth_date = datetime.strptime(birthdate, "%Y-%m-%d").date()
-        record_date = datetime.strptime(self.date, "%Y-%m-%d").date()
+        birth_date = datetime.strptime(birthdate, "%Y/%m/%d").date()
+        record_date = datetime.strptime(self.date, "%Y/%m/%d").date()
         actual_age = record_date.year - birth_date.year - (
             (record_date.month, record_date.day) < (birth_date.month, birth_date.day)
         )
