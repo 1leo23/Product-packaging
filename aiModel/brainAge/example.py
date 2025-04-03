@@ -1,14 +1,58 @@
 import os
 import sys
+import subprocess
 
-# 假設前處理程式碼在 preprocessing.py 中
-from preprocessing import preprocessing
+def preprocessing(input_path):
+    """使用 env_processing 環境執行 processing.py 並取得前處理結果的檔案路徑"""
+    try:
+        result = subprocess.run(
+            f"conda run -n brainAge_pp_env python preprocessing.py {input_path}",
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        msg = result.stdout.strip()
+        print("=====前處理執行狀況=====")
+        print(msg)
+        print("=====前處理執行結束=====:")
+        
+    except subprocess.CalledProcessError as e:
+        print("前處理執行失敗：", e.stderr)
+        return None
 
-# 假設模型程式碼在 model.py 中
-from runModel import runModel
+    # 預期 processing.py 將前處理後的檔案路徑輸出到 stdout
+    processed_path = result.stdout.strip().split('\n')[-1]
+    print("前處理結果檔案路徑:", processed_path)
+    return processed_path
+
+def runModel(processed_path):
+    """使用 env_runmodel 環境執行 runModel.py 並取得預測的腦齡"""
+    try:
+        result = subprocess.run(
+            ["conda", "run", "-n", "brainAge_runModel_env", "python", "runModel.py", processed_path],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        msg = result.stdout.strip()
+        print("=====腦齡預測執行狀況=====")
+        print(msg)
+        print("=====腦齡預測執行結束=====:")
+    except subprocess.CalledProcessError as e:
+        print("腦齡預測執行失敗：", e.stderr)
+        return None
+
+    try:
+        # 預期 runModel.py 將預測結果輸出至 stdout
+        brain_age = float(result.stdout.strip().split('\n')[-1])
+    except ValueError:
+        print("無法解析腦齡預測結果：", result.stdout)
+        return None
+
+    return brain_age
 
 def main():
-    # 獲取並驗證輸入路徑
+    # 檢查並驗證輸入檔案路徑
     path = r"D:\brainAgePrediction\Trajectory\aiModel\brainAge\samples\ADNI-sc-CN_I18211_90_F_.nii.gz"
     input_path = os.path.abspath(path)
     if not os.path.exists(input_path):
@@ -23,7 +67,6 @@ def main():
     # 第一步：執行前處理
     print("執行前處理...")
     preprocessed_path = preprocessing(input_path)
-    print(preprocessed_path)
     if preprocessed_path is None or not os.path.exists(preprocessed_path):
         print("前處理失敗，程式終止")
         sys.exit(1)
@@ -40,4 +83,5 @@ def main():
     print(f"預測腦齡: {brain_age:.2f} 歲")
     return brain_age
 
-main()
+if __name__ == "__main__":
+    main()

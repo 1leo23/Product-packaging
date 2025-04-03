@@ -1,5 +1,6 @@
 import SimpleITK as sitk
 from antspynet.utilities import brain_extraction
+import sys
 import ants
 import numpy as np
 import os
@@ -63,32 +64,48 @@ def sitk_mni_registration(input_image,template_image):
 #################### 前處理主程式 #####################
 def preprocessing(nii_file_path):
     try:
-        print("pp開始前處理"+nii_file_path)
-        # 讀檔
-        template_image = sitk.ReadImage('mni152-s.nii',sitk.sitkFloat32)
-        print("ppMNI模板讀檔成功")
-         # 讀檔案
-        input_image = ants.image_read(rf'samples\ADNI-sc-CN_I18211_90_F_.nii.gz')
-        print("pp讀檔成功")
+        print("開始前處理:", nii_file_path)
+        # 讀取 MNI 模板
+        template_image = sitk.ReadImage('mni152-s.nii', sitk.sitkFloat32)
+        print("MNI 模板讀檔成功")
+        
+        # 讀取輸入檔案
+        input_image = ants.image_read(nii_file_path)
+        print("讀檔成功")
+        
         # 去顱骨 (01)
         masked_image = ants_skull_stripping(input_image)
-        print("pp去顱骨成功")
-        # MNI配準 (02)
-        input_image = ants_2_itk(masked_image)
-        registered_image = sitk_mni_registration(input_image,template_image)
-        print("pp配准成功")
-        # 強度歸一 (result)
-        input_image = itk_2_ants(registered_image)
-        truncated_img = ants.iMath_truncate_intensity(input_image, 0.05, 0.95) # 0.01 到 0.99 分位數
-        normalized_img = ants.iMath_normalize(truncated_img) # 歸一化到 [0, 1] float32
-        img_uint8 = ((normalized_img - normalized_img.min()) / (normalized_img.max() - normalized_img.min()) * 255).astype('uint8') # Min-Max 歸一化到 [0, 255] unit8
-        print("pp強度統一成功")
-        # 存檔
+        print("去顱骨成功")
+        
+        # MNI 配準 (02)
+        input_image_itk = ants_2_itk(masked_image)
+        registered_image = sitk_mni_registration(input_image_itk, template_image)
+        print("配準成功")
+        
+        # 強度歸一化
+        input_image_ants = itk_2_ants(registered_image)
+        truncated_img = ants.iMath_truncate_intensity(input_image_ants, 0.05, 0.95)
+        normalized_img = ants.iMath_normalize(truncated_img)
+        img_uint8 = ((normalized_img - normalized_img.min()) / (normalized_img.max() - normalized_img.min()) * 255).astype('uint8')
+        print("強度歸一成功")
+        
+        # 儲存結果
         filename = os.path.basename(nii_file_path)
-        path = os.path.join('ppResult',filename)
-        ants.image_write(img_uint8, path)
-        print("pp存檔成功")
-        return os.path.abspath(path)  # 回傳前處理檔案之絕對路徑
-    except:
-        return "前處理失敗"
-preprocessing(r"D:\brainAgePrediction\Trajectory\aiModel\brainAge\samples\ADNI-sc-CN_I18211_90_F_.nii.gz")
+        output_dir = 'ppResult'
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, filename)
+        ants.image_write(img_uint8, output_path)
+        print("存檔成功")
+        return os.path.abspath(output_path)
+    except Exception as e:
+        print("前處理失敗:", e)
+        sys.exit(1)
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("請提供要處理的 nii.gz 檔案路徑")
+        sys.exit(1)
+    nii_file_path = sys.argv[1]
+    output_path = preprocessing(nii_file_path)
+    # 將結果路徑輸出到標準輸出，供呼叫端取得
+    print(output_path)

@@ -5,6 +5,7 @@ import numpy as np
 import os
 import torch.nn.functional as F
 import nibabel as nib
+import sys
 
 # 定義 sfcn 的基本塊
 class BasicBlock(nn.Module): # Conv -> BN -> MaxPooling -> ReLU
@@ -84,30 +85,51 @@ class SFCN(nn.Module):
         return x
     
 def runModel(path):
-    cnns=[None, None, None, None, None]
-    pt_ls = os.listdir(r'models')
+    # 載入五個模型
+    cnns = [None] * 5
+    model_dir = 'models'
+    pt_files = os.listdir(model_dir)
+    if len(pt_files) < 5:
+        print("模型數量不足，請確認 models 資料夾內有至少五個模型檔")
+        sys.exit(1)
     for i in range(5):
         cnns[i] = SFCN(num_classes=1)
-        pt_path = os.path.join(r'models',pt_ls[i])
-        cnns[i].load_state_dict(torch.load(pt_path))
+        pt_path = os.path.join(model_dir, pt_files[i])
+        # 載入模型參數
+        cnns[i].load_state_dict(torch.load(pt_path, map_location=torch.device('cpu')))
         cnns[i].eval()
-    image = np.zeros((1,128,192,128),dtype=np.uint8)
-    # 製作 numpy image
-    data = nib.load(path)
-    image = data.get_fdata()
-    # 製作 torch image
-    image_tensor = torch.from_numpy(image).to(torch.uint8)  # 儲存為 uint8
-    # 製作 輸入檔
+
+    # 讀取影像資料
+    try:
+        data = nib.load(path)
+        image = data.get_fdata()
+    except Exception as e:
+        print("讀取影像失敗:", e)
+        sys.exit(1)
+
+    # 製作 torch tensor：轉換為 float 並做 [0,1] normalization
+    image_tensor = torch.from_numpy(image).to(torch.uint8)
     inputs = image_tensor.to(torch.float32) / 255.0
-    inputs = inputs.unsqueeze(0)
-    inputs = inputs.unsqueeze(0)
-    print(inputs.shape)
-    # 組合評估
+    # 增加 batch 與 channel 維度
+    inputs = inputs.unsqueeze(0).unsqueeze(0)
+    print("輸入影像尺寸:", inputs.shape)
+
+    # 模型集成評估
     ensemble_output = 0.0
     for model_i in range(5):
-        outputs = cnns[model_i](inputs)
-        ensemble_output += outputs.item()*0.2
+        with torch.no_grad():
+            outputs = cnns[model_i](inputs)
+        ensemble_output += outputs.item() * 0.2
+
     brainAge = ensemble_output
     print(f"腦齡：{brainAge}")
     return brainAge
-runModel(r'D:\brainAgePrediction\Trajectory\aiModel\brainAge\ppResult\ADNI-sc-CN_I18211_90_F_.nii.gz')
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("請提供要預測的 nii.gz 檔案路徑")
+        sys.exit(1)
+    nii_file_path = sys.argv[1]
+    brain_age = runModel(nii_file_path)
+    # 將預測結果輸出到標準輸出，方便其他程式捕捉
+    print(brain_age)
