@@ -37,6 +37,34 @@ def create_jwt_token(data: dict, expires_delta: datetime.timedelta = datetime.ti
 # 本地存儲路徑
 MANAGER_PROFILE_DIR = r"C:\Users\User\Pictures\manager_profile"
 os.makedirs(MANAGER_PROFILE_DIR, exist_ok=True)
+MEMBER_PROFILE_DIR = r"C:\Users\User\Pictures\member_profile"
+os.makedirs(MEMBER_PROFILE_DIR, exist_ok=True)
+
+### 取得醫生個人照 ###
+@router.get("/manager/profile/{manager_id}")
+def get_manager_profile(manager_id: str):
+    manager = manager_collection.find_one({"id": manager_id})
+    if not manager or "manager_profile_path" not in manager:
+        raise HTTPException(status_code=404, detail="找不到該醫生或個人照")
+    
+    profile_path = manager["manager_profile_path"]
+    if not os.path.exists(profile_path):
+        raise HTTPException(status_code=404, detail="個人照不存在")
+
+    return FileResponse(profile_path)
+
+### 取得會員個人照 ###
+@router.get("/member/profile/{member_id}")
+def get_member_profile(member_id: str):
+    member = member_collection.find_one({"id": member_id})
+    if not member or "member_profile_path" not in member:
+        raise HTTPException(status_code=404, detail="找不到該會員或個人照")
+    
+    profile_path = member["member_profile_path"]
+    if not os.path.exists(profile_path):
+        raise HTTPException(status_code=404, detail="個人照不存在")
+
+    return FileResponse(profile_path)
 
 # 管理員註冊
 @router.post("/manager/Manager_Signup")
@@ -82,8 +110,6 @@ def manager_signin(signin_data: LoginRequest):
     return {"manager_token": manager_token, "message": f"{signin_data.id} 成功登入"}
 
 ### 會員註冊 ###
-MEMBER_PROFILE_DIR = r"C:\Users\User\Pictures\member_profile"
-os.makedirs(MEMBER_PROFILE_DIR, exist_ok=True)
 @router.post("/manager/Member_Signup")
 def member_signup(
     id: str = Form(...),
@@ -136,24 +162,33 @@ def member_signup(
 
     return {"message": "成員註冊成功。"}
 
-# 獲取管理員資料
+### 取得醫生資訊 ###
 @router.post("/manager/Info")
 def get_manager_info(manager_token: ManagerToken):
     manager_id = jwt.decode(manager_token.token, SECRET_KEY, algorithms=["HS256"])["id"]
     manager = manager_collection.find_one({"id": manager_id}, {"_id": 0, "password": 0})
-
+    
     if not manager:
-        raise HTTPException(status_code=404, detail="找不到該管理員")
+        raise HTTPException(status_code=404, detail="找不到該醫生")
+    
+    # 替換個人照 URL
+    manager["manager_profile_path"] = f"/manager_profile/{manager_id}"
     
     return manager
 
-# 獲取成員資料
+### 取得成員列表 ###
 @router.post("/manager/MemberList")
 def get_member_list(manager_token: ManagerToken):
     manager_id = jwt.decode(manager_token.token, SECRET_KEY, algorithms=["HS256"])["id"]
     members = member_collection.find({"managerID": manager_id}, {"_id": 0, "password": 0})
-
-    return [member for member in members]
+    
+    # 替換個人照 URL
+    result = []
+    for member in members:
+        member["member_profile_path"] = f"/member_profile/{member['id']}"
+        result.append(member)
+    
+    return result
 
 # 成員登入
 @router.post("/member/Signin")
@@ -188,9 +223,12 @@ def get_member_records(member_token: ManagerToken):
 @router.post("/member/Info")
 def get_member_info(member_token: ManagerToken, member_id: str):
     member = member_collection.find_one({"id": member_id}, {"_id": 0, "password": 0})
-
+    
     if not member:
-        raise HTTPException(status_code=404, detail="找不到該成員")
+        raise HTTPException(status_code=404, detail="找不到該會員")
+    
+    # 替換個人照 URL
+    member["member_profile_path"] = f"/member_profile/{member_id}"
     
     return member
 

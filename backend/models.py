@@ -11,7 +11,7 @@ class Member(BaseModel):
     sex: str = Field(..., description="請輸入 M 或 F")
     name: str = Field(..., min_length=1, description="姓名不能為空")
     birthdate: str = Field(..., description="出生日期 (YYYYMMDD)")
-    profile_image_path: Optional[str] = None  # 本地圖片路徑
+    member_profile_path: Optional[str] = None  # 會員個人照片路徑
     managerID: str = Field(..., description="註冊醫生 ID")
     password: Optional[str] = None  # 預設為出生年月日
 
@@ -37,15 +37,15 @@ class Member(BaseModel):
         """ 生成密碼：格式為 yyyymmdd """
         self.password = self.birthdate
 
+
 ### 管理員 (Manager) 模型 ###
 class Manager(BaseModel):
     id: str = Field(..., min_length=5, max_length=20, description="醫生個人編號")
     password: str = Field(..., min_length=6, description="密碼至少 6 碼")
     department: str = Field(..., description="醫生的科別")
     name: str = Field(..., min_length=1, description="姓名不能為空")
-    profile_image_path: str = Field(..., description="醫生的個人照路徑")
+    manager_profile_path: str = Field(..., description="醫生的個人照路徑")
     numMembers: int = Field(default=0, description="患者人數")
-
 
 ### 登入請求模型 ###
 class LoginRequest(BaseModel):
