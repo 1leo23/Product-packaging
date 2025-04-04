@@ -1,12 +1,14 @@
 Raw Data 到 腦齡 使用說明
 
 步驟一	環境安裝
+(必須用Anaconda prompt)
 conda env create -f brainAge_pp_env.yml
 conda env create -f brainAge_runModel_env.yml
 (補充：環境輸出conda env export > environment.yml)
 
 步驟二	執行example.py
-python example.py
+(必須用Anaconda prompt)
+python example.py 
 說明：
 1. 將特定路徑(寫在example.py)的nii.gz檔放入preprocessing.py執行
 2. 生成前處理檔並放入ppResult
