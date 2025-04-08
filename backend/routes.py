@@ -1,8 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends, Form, UploadFile, File
 from fastapi.security import OAuth2PasswordBearer
-from models import Member, LoginRequest, MemberQuery, Manager, ManagerToken, Record
+from fastapi.responses import FileResponse
+from models import Member, Manager, LoginRequest, MemberQuery, ManagerToken, MemberToken, Record
 from pymongo import MongoClient
 from dotenv import load_dotenv
+from pathlib import Path
+from typing import Union
 import os
 import jwt
 import datetime
@@ -16,6 +19,7 @@ DATABASE_NAME = os.getenv("DATABASE_NAME")
 MEMBER_COLLECTION = os.getenv("MEMBER_COLLECTION")
 MANAGER_COLLECTION = os.getenv("MANAGER_COLLECTION")
 SECRET_KEY = os.getenv("SECRET_KEY")
+STORAGE_ROOT = os.getenv("STORAGE_ROOT")
 
 # 連接 MongoDB
 client = MongoClient(MONGO_URI)
@@ -35,19 +39,22 @@ def create_jwt_token(data: dict, expires_delta: datetime.timedelta = datetime.ti
 
 ### 管理員註冊 ###
 # 本地存儲路徑
-MANAGER_PROFILE_DIR = r"C:\Users\User\Pictures\manager_profile"
+MANAGER_PROFILE_DIR = os.path.join(STORAGE_ROOT, "manager_profile")
 os.makedirs(MANAGER_PROFILE_DIR, exist_ok=True)
-MEMBER_PROFILE_DIR = r"C:\Users\User\Pictures\member_profile"
+MEMBER_PROFILE_DIR = os.path.join(STORAGE_ROOT, "member_profile")
 os.makedirs(MEMBER_PROFILE_DIR, exist_ok=True)
+BRAIN_IMAGE_DIR = os.path.join(STORAGE_ROOT, "brain_image")
+os.makedirs(BRAIN_IMAGE_DIR, exist_ok=True)
+Path(STORAGE_ROOT).mkdir(parents=True, exist_ok=True)
 
 ### 取得醫生個人照 ###
 @router.get("/manager/profile/{manager_id}")
 def get_manager_profile(manager_id: str):
     manager = manager_collection.find_one({"id": manager_id})
-    if not manager or "manager_profile_path" not in manager:
+    if not manager or "profile_image_path" not in manager:
         raise HTTPException(status_code=404, detail="找不到該醫生或個人照")
     
-    profile_path = manager["manager_profile_path"]
+    profile_path = manager["profile_image_path"]
     if not os.path.exists(profile_path):
         raise HTTPException(status_code=404, detail="個人照不存在")
 
@@ -57,10 +64,10 @@ def get_manager_profile(manager_id: str):
 @router.get("/member/profile/{member_id}")
 def get_member_profile(member_id: str):
     member = member_collection.find_one({"id": member_id})
-    if not member or "member_profile_path" not in member:
+    if not member or "profile_image_path" not in member:
         raise HTTPException(status_code=404, detail="找不到該會員或個人照")
     
-    profile_path = member["member_profile_path"]
+    profile_path = member["profile_image_path"]
     if not os.path.exists(profile_path):
         raise HTTPException(status_code=404, detail="個人照不存在")
 
@@ -85,15 +92,15 @@ def manager_signup(
         shutil.copyfileobj(profile_image_file.file, buffer)
 
     # 存入資料庫
-    manager_data = {
-        "id": id,
-        "password": password,
-        "department": department,
-        "name": name,
-        "profile_image_path": profile_image_path,
-        "numMembers": 0  # 初始沒有病人
-    }
-    manager_collection.insert_one(manager_data)
+    new_manager = Manager(
+        id=id,
+        password=password,
+        department=department,
+        name=name,
+        profile_image_path=profile_image_path,
+        numMembers=0  # 初始沒有病人
+    )
+    manager_collection.insert_one(new_manager.dict())
 
     return {"message": "醫師註冊成功"}
 
@@ -105,9 +112,11 @@ def manager_signin(signin_data: LoginRequest):
 
     if not manager or manager["password"] != signin_data.password:
         raise HTTPException(status_code=401, detail="帳號或密碼錯誤")
-    
-    manager_token = create_jwt_token({"id": signin_data.id})
+
+    # 生成管理員的 token，並加上 "role" 欄位
+    manager_token = create_jwt_token({"id": signin_data.id, "role": "manager"})
     return {"manager_token": manager_token, "message": f"{signin_data.id} 成功登入"}
+
 
 ### 會員註冊 ###
 @router.post("/manager/Member_Signup")
@@ -199,29 +208,45 @@ def member_signin(signin_data: LoginRequest):
         raise HTTPException(status_code=401, detail="帳號或密碼錯誤")
 
     # 產生應該匹配的密碼
-    expected_password = f"{member['yyyy']}{str(member['mm']).zfill(2)}{str(member['dd']).zfill(2)}"
+    expected_password = f"{member['birthdate']}"
 
     if signin_data.password != expected_password:
         raise HTTPException(status_code=401, detail="帳號或密碼錯誤")
 
-    member_token = create_jwt_token({"id": signin_data.id})
+    # 生成成員的 token，並加上 "role" 欄位
+    member_token = create_jwt_token({"id": signin_data.id, "role": "member"})
     return {"member_token": member_token, "message": f"{signin_data.id} 成功登入"}
-
 
 # 成員拍攝紀錄
 @router.post("/member/RecordsList")
-def get_member_records(member_token: ManagerToken):
-    member_id = jwt.decode(member_token.token, SECRET_KEY, algorithms=["HS256"])["id"]
-    records = member_collection.find_one({"id": member_id}, {"_id": 0, "password": 0, "managerID": 0})
+def get_member_records(token: Union[MemberToken, ManagerToken], member_id: str):
+    # 解析 token 以獲取角色和 ID
+    decoded_token = jwt.decode(token.token, SECRET_KEY, algorithms=["HS256"])
+    current_user_id = decoded_token.get("id")  # 使用 .get() 確保不會拋出 KeyError
+    current_user_role = decoded_token.get("role")  # 使用 .get() 確保不會拋出 KeyError
+
+    # 檢查是否為管理者或該成員自己
+    if current_user_role == "manager":
+        # 管理者可以查看任何成員的紀錄
+        records = member_collection.find_one({"id": member_id}, {"_id": 0, "password": 0, "managerID": 0})
+    elif current_user_role == "member" and current_user_id == member_id:
+        # 成員只能查看自己的紀錄
+        records = member_collection.find_one({"id": member_id}, {"_id": 0, "password": 0, "managerID": 0})
+    else:
+        # 非法訪問：如果是成員但請求查看其他人的紀錄，則返回錯誤
+        raise HTTPException(status_code=403, detail="無權查看此成員的紀錄")
 
     if not records:
-        raise HTTPException(status_code=404, detail="找不到該成員")
+        raise HTTPException(status_code=404, detail="找不到該成員的紀錄")
 
+    # 根據日期排序紀錄
     return sorted(records.get("RecordList", []), key=lambda x: x["date"])
+
 
 # 獲取成員基本資料
 @router.post("/member/Info")
-def get_member_info(member_token: ManagerToken, member_id: str):
+def get_member_info(token: Union[MemberToken, ManagerToken], member_id: str):
+    member_id = jwt.decode(token.token, SECRET_KEY, algorithms=["HS256"])["id"]
     member = member_collection.find_one({"id": member_id}, {"_id": 0, "password": 0})
     
     if not member:
@@ -239,7 +264,6 @@ def ai_calculation(image_path: str):
     return {"brainAge": 45, "riskScore": 5}
 
 # 上傳拍攝記錄
-BRAIN_IMAGE_DIR = r"C:\Users\User\Pictures\brain_image"
 os.makedirs(BRAIN_IMAGE_DIR, exist_ok=True)
 @router.post("/upload/Record")
 def upload_record(
@@ -309,6 +333,7 @@ def upload_record(
 
 # 登出
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+token_blacklist = set()
 
 @router.post("/Logout")
 def logout(token: str = Depends(oauth2_scheme)):

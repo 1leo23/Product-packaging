@@ -11,7 +11,7 @@ class Member(BaseModel):
     sex: str = Field(..., description="請輸入 M 或 F")
     name: str = Field(..., min_length=1, description="姓名不能為空")
     birthdate: str = Field(..., description="出生日期 (YYYYMMDD)")
-    member_profile_path: Optional[str] = None  # 會員個人照片路徑
+    profile_image_path: Optional[str] = None  # 會員個人照片路徑
     managerID: str = Field(..., description="註冊醫生 ID")
     password: Optional[str] = None  # 預設為出生年月日
 
@@ -30,7 +30,11 @@ class Member(BaseModel):
     @validator("birthdate")
     def validate_birthdate(cls, value):
         if not re.match(r"^\d{8}$", value):
-            raise ValueError("出生日期格式錯誤，應為 YYYYMMDD")
+            if "/" in value:
+                yyyy, mm, dd = value.split("/")
+                value = f"{yyyy}{mm}{dd}"
+            else:
+                raise ValueError("出生日期格式錯誤，應為 YYYYMMDD")
         return value
 
     def generate_password(self):
@@ -44,7 +48,7 @@ class Manager(BaseModel):
     password: str = Field(..., min_length=6, description="密碼至少 6 碼")
     department: str = Field(..., description="醫生的科別")
     name: str = Field(..., min_length=1, description="姓名不能為空")
-    manager_profile_path: str = Field(..., description="醫生的個人照路徑")
+    profile_image_path: str = Field(..., description="醫生的個人照路徑")
     numMembers: int = Field(default=0, description="患者人數")
 
 ### 登入請求模型 ###
@@ -53,6 +57,9 @@ class LoginRequest(BaseModel):
     password: str
 
 class ManagerToken(BaseModel):
+    token: str
+
+class MemberToken(BaseModel):
     token: str
 
 class MemberQuery(BaseModel):
