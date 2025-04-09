@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:trajectory_app/const/constant.dart';
 import 'package:trajectory_app/models/manager_model.dart';
 import 'package:trajectory_app/models/member_model.dart';
+import 'package:trajectory_app/services/api_service.dart';
 
 class ProfileWidget extends StatelessWidget {
   final String type;
@@ -33,36 +34,78 @@ class ProfileWidget extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          Container(
-            width: 180, // 直徑 = 2 * radius
-            height: 180,
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color:
-                    type == 'manager'
-                        ? const Color.fromARGB(255, 250, 250, 152)
-                        : selectionColor, // 邊框顏色
-                width: 2, // 邊框寬度
-              ),
-            ),
-            child: const CircleAvatar(
-              radius: 64, // 內部頭像略小於容器，以顯示邊框
-              backgroundColor: Colors.transparent,
-              backgroundImage: AssetImage('/assets/images/avatar.png'),
-            ),
-          ),
-          const SizedBox(height: 20),
+          type == 'manager'
+              ? _managerProfileImage(manager)
+              : _memberProfileImage(member),
 
-          type == 'manager' ? _managerInfo(manager) : _userInfo(member),
+          const SizedBox(height: 20),
+          type == 'manager' ? _managerInfo(manager) : _memberInfo(member),
         ],
       ),
     );
   }
 }
 
-Column _userInfo(MemberModel member) {
+Widget _managerProfileImage(ManagerModel manager) {
+  return FutureBuilder<String?>(
+    future: ApiService.getManagerImage(manager.id),
+    builder: (context, snapshot) {
+      final imageUrl = snapshot.data;
+
+      return Container(
+        width: 180,
+        height: 180,
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: const Color.fromARGB(255, 250, 250, 152),
+            width: 2,
+          ),
+        ),
+        child: CircleAvatar(
+          radius: 64,
+          backgroundColor: Colors.transparent,
+          backgroundImage:
+              (snapshot.connectionState == ConnectionState.done &&
+                      imageUrl != null)
+                  ? NetworkImage(imageUrl)
+                  : null,
+        ),
+      );
+    },
+  );
+}
+
+Widget _memberProfileImage(MemberModel member) {
+  return FutureBuilder<String?>(
+    future: ApiService.getMemberImage(member.id),
+    builder: (context, snapshot) {
+      final imageUrl = snapshot.data;
+
+      return Container(
+        width: 180,
+        height: 180,
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: selectionColor, width: 2),
+        ),
+        child: CircleAvatar(
+          radius: 64,
+          backgroundColor: Colors.transparent,
+          backgroundImage:
+              (snapshot.connectionState == ConnectionState.done &&
+                      imageUrl != null)
+                  ? NetworkImage(imageUrl)
+                  : null,
+        ),
+      );
+    },
+  );
+}
+
+Column _memberInfo(MemberModel member) {
   return Column(
     children: [
       Text(

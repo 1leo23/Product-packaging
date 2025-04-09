@@ -31,10 +31,11 @@ class _ManagerScreenState extends State<ManagerScreen> {
     });
   }
 
-  final List<Widget> mainWidgetList = [
+  // 更新 mainWidgetList，將回調傳給 AddMemberWidget
+  late final List<Widget> mainWidgetList = [
     const MemberListWidget(),
     const UploadFormWidget(),
-    const AddMemberWidget(),
+    AddMemberWidget(onMemberAdded: loadManagerInfo), // 傳遞回調
   ];
   List<Widget> profileWidgetList = [
     const ProfileWidget(type: 'manager'), // 成員管理頁

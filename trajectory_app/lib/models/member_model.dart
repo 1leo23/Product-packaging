@@ -18,16 +18,23 @@ class MemberModel {
   });
   // 從 JSON 創建 MemberModel
   factory MemberModel.fromJson(Map<String, dynamic> json) {
+    String yyyy = '--';
+    String mm = '--';
+    String dd = '--';
+    if (json['birthdate'] != null && json['birthdate'].length == 8) {
+      final birthdayStr = json['birthdate'];
+      yyyy = birthdayStr.substring(0, 4);
+      mm = birthdayStr.substring(4, 6);
+      dd = birthdayStr.substring(6, 8);
+    }
     return MemberModel(
       id: json['id'] as String? ?? '--',
       sex: json['sex'] as String? ?? '--',
       name: json['name'] as String? ?? '--',
-      yyyy: (json['yyyy'] as int?)?.toString() ?? '--', // 將 int 轉為 String
-      mm: (json['mm'] as int?)?.toString() ?? '--',
-      dd: (json['dd'] as int?)?.toString() ?? '--',
-      numRecords: '--', // API 未提供，保持預設值
-      //profileImagePath: json['profile_image_path'] as String? ?? '',
-      //managerID: json['managerID'] as String? ?? '',
+      yyyy: yyyy,
+      mm: mm,
+      dd: dd,
+      numRecords: json['numRecords'] as String? ?? '--',
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:trajectory_app/cards/custom_card.dart';
 import 'package:trajectory_app/const/constant.dart';
 import 'package:trajectory_app/models/member_model.dart';
+import 'package:trajectory_app/services/api_service.dart';
 
 class MemberCard extends StatelessWidget {
   final int index;
@@ -28,11 +29,29 @@ class MemberCard extends StatelessWidget {
                   width: 2, // 邊框寬度
                 ),
               ),
-              child: const CircleAvatar(
-                radius: 64, // 內部頭像略小於容器，以顯示邊框
-                backgroundColor: Colors.transparent,
-                backgroundImage: AssetImage('/assets/images/avatar.png'),
+              /*------------個人照顯示 (非同步建構)---------------*/
+              child: FutureBuilder<String?>(
+                future: ApiService.getMemberImage(memberList[index].id),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    );
+                  } else {
+                    final imageUrl = snapshot.data;
+                    return CircleAvatar(
+                      radius: 64,
+                      backgroundColor: Colors.transparent,
+                      backgroundImage:
+                          (imageUrl != null)
+                              ? NetworkImage(imageUrl)
+                              : const AssetImage('/assets/images/avatar.png')
+                                  as ImageProvider,
+                    );
+                  }
+                },
               ),
+              /*------------個人照顯示 結束---------------*/
             ),
             const SizedBox(width: 16),
             // 文字資訊
@@ -91,7 +110,7 @@ class MemberCard extends StatelessWidget {
                     '${memberList[index].yyyy}/${memberList[index].mm}/${memberList[index].dd}',
                   ),
                   _buildInfoRow('性別', memberList[index].sex),
-                  _buildInfoRow('影像紀錄', '5'),
+                  _buildInfoRow('影像紀錄', memberList[index].numRecords),
                 ],
               ),
             ),

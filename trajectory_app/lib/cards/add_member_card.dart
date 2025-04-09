@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:trajectory_app/cards/custom_card.dart';
 import 'package:trajectory_app/models/member_model.dart';
 import 'package:trajectory_app/services/api_service.dart';
+import 'package:file_picker/file_picker.dart'; // 引入 file_picker
+import 'dart:io'; // 用於 File 類型
 
 class AddMemberCard extends StatefulWidget {
-  const AddMemberCard({super.key});
+  final VoidCallback? onMemberAdded; // 為了更新醫生的成員數
+  const AddMemberCard({super.key, this.onMemberAdded});
 
   @override
   State<AddMemberCard> createState() => _AddMemberCardState();
@@ -15,15 +18,29 @@ class _AddMemberCardState extends State<AddMemberCard> {
   final _idController = TextEditingController();
   final _dateController = TextEditingController();
   final _sexController = TextEditingController();
-  final FocusNode _textFieldFocusNode = FocusNode(); // 創建 FocusNode
+  File? _selectedImage; // 用於儲存選擇的圖片
+  //final FocusNode _textFieldFocusNode = FocusNode(); // 創建 FocusNode
   @override
   void dispose() {
     _nameController.dispose();
     _idController.dispose();
     _dateController.dispose();
     _sexController.dispose();
-    _textFieldFocusNode.dispose();
+    //_textFieldFocusNode.dispose();
     super.dispose();
+  }
+
+  /********************************* 選擇圖片 ****************************/
+  Future<void> _pickImage() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.image, // 限制只選擇圖片
+      allowMultiple: false, // 僅允許單選
+    );
+    if (result != null && result.files.single.path != null) {
+      setState(() {
+        _selectedImage = File(result.files.single.path!); // 更新圖片
+      });
+    }
   }
 
   /********************************* 送出表單 ****************************/
@@ -62,8 +79,11 @@ class _AddMemberCardState extends State<AddMemberCard> {
       mm: mm,
       dd: dd,
     );
-
-    final success = await ApiService.memberSignup(member);
+    // 調用 API，傳入 member 和圖片
+    final success = await ApiService.memberSignup(
+      member,
+      _selectedImage!,
+    ); // 使用 ! 斷言非空
     if (success) {
       ScaffoldMessenger.of(
         context,
@@ -73,6 +93,11 @@ class _AddMemberCardState extends State<AddMemberCard> {
       _idController.clear();
       _dateController.clear();
       _sexController.clear();
+      setState(() {
+        _selectedImage = null; // 清空圖片
+      });
+      // 更新醫生成員數量
+      widget.onMemberAdded!();
     } else {
       ScaffoldMessenger.of(
         context,
@@ -84,37 +109,6 @@ class _AddMemberCardState extends State<AddMemberCard> {
   @override
   void initState() {
     super.initState();
-    // 監聽焦點變化
-    _textFieldFocusNode.addListener(() {
-      if (!_textFieldFocusNode.hasFocus) {
-        // 失去焦點時
-        setState(() {
-          String yyyy = '--';
-          String mm = '--';
-          String dd = '--';
-          if (_dateController.text.isNotEmpty) {
-            final dateParts = _dateController.text.split('/');
-            if (dateParts.length == 3) {
-              yyyy = dateParts[0];
-              mm = dateParts[1];
-              dd = dateParts[2];
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('日期格式錯誤，請使用 YYYY/MM/DD')),
-              );
-            }
-          }
-          final member = MemberModel(
-            name: _nameController.text,
-            id: _idController.text,
-            sex: _sexController.text,
-            yyyy: yyyy,
-            mm: mm,
-            dd: dd,
-          );
-        });
-      }
-    });
   }
 
   @override
@@ -135,35 +129,16 @@ class _AddMemberCardState extends State<AddMemberCard> {
               ),
             ),
             const SizedBox(height: 16),
-            _buildInputRow(
-              '姓名',
-              '姓名',
-              true,
-              controller: _nameController,
-              focusNode: _textFieldFocusNode,
-            ),
-            _buildInputRow(
-              '身份證字號',
-              '身份證字號',
-              true,
-              controller: _idController,
-              focusNode: _textFieldFocusNode,
-            ),
+            _buildInputRow('姓名', '姓名', true, controller: _nameController),
+            _buildInputRow('身份證字號', '身份證字號', true, controller: _idController),
             _buildInputRow(
               '出生日期',
               'YYYY/MM/DD',
               true,
               controller: _dateController,
-              focusNode: _textFieldFocusNode,
             ),
-            _buildInputRow(
-              '性別',
-              'M/F',
-              true,
-              controller: _sexController,
-              focusNode: _textFieldFocusNode,
-            ),
-            _buildInputRow('上傳照片', '上傳照片', true),
+            _buildInputRow('性別', 'M/F', true, controller: _sexController),
+            _buildImagePickerRow(),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -197,56 +172,99 @@ class _AddMemberCardState extends State<AddMemberCard> {
       ),
     );
   }
-}
 
-Widget _buildInputRow(
-  String label,
-  String hint,
-  bool enabled, {
-  TextEditingController? controller,
-  FocusNode? focusNode,
-}) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8.0),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white70, fontSize: 16),
-        ),
-        SizedBox(
-          height: 40,
-          width: 200,
-          child: TextField(
-            focusNode: focusNode, // 綁定 FocusNode
-            controller: controller,
-            enabled: enabled,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor:
-                  enabled
-                      ? Colors.transparent
-                      : const Color.fromARGB(255, 55, 56, 74),
-              hintText: hint,
-              hintStyle: const TextStyle(color: Colors.white54),
-              border: OutlineInputBorder(
-                borderSide: const BorderSide(color: Colors.red),
-                borderRadius: BorderRadius.circular(8.0),
+  Widget _buildImagePickerRow() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            '上傳照片',
+            style: TextStyle(color: Colors.white70, fontSize: 16),
+          ),
+          SizedBox(
+            height: 40,
+            width: 200,
+            child: OutlinedButton(
+              onPressed: _pickImage, // 點擊選擇圖片
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.white), // 邊框顏色
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                padding: const EdgeInsets.all(0), // 移除內邊距以適應內容
               ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: const BorderSide(color: Colors.white),
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 10,
+              child: Center(
+                child:
+                    _selectedImage == null
+                        ? const Text(
+                          '點擊選擇照片',
+                          style: TextStyle(color: Colors.white54),
+                        )
+                        : Image.file(
+                          _selectedImage!,
+                          fit: BoxFit.cover,
+                          height: 40,
+                          width: 200,
+                        ),
               ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputRow(
+    String label,
+    String hint,
+    bool enabled, {
+    TextEditingController? controller,
+    FocusNode? focusNode,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white70, fontSize: 16),
+          ),
+          SizedBox(
+            height: 40,
+            width: 200,
+            child: TextField(
+              focusNode: focusNode, // 綁定 FocusNode
+              controller: controller,
+              enabled: enabled,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor:
+                    enabled
+                        ? Colors.transparent
+                        : const Color.fromARGB(255, 55, 56, 74),
+                hintText: hint,
+                hintStyle: const TextStyle(color: Colors.white54),
+                border: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Colors.red),
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Colors.white),
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

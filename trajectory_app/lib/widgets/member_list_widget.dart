@@ -51,7 +51,7 @@ class _MemberListWidgetState extends State<MemberListWidget> {
                       (context, index) => Column(
                         children: [
                           MemberCard(memberList: data, index: index),
-                          SizedBox(height: 10), // 這裡控制間距，例如 10
+                          const SizedBox(height: 10), // 這裡控制間距，例如 10
                         ],
                       ),
                 ),
