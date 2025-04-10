@@ -14,6 +14,7 @@ class Member(BaseModel):
     profile_image_path: Optional[str] = None  # 會員個人照片路徑
     managerID: str = Field(..., description="註冊醫生 ID")
     password: Optional[str] = None  # 預設為出生年月日
+    record_count: int = 0 #影像紀錄預設為0
 
     @validator("id")
     def validate_id(cls, value):
@@ -34,7 +35,7 @@ class Member(BaseModel):
                 yyyy, mm, dd = value.split("/")
                 value = f"{yyyy}{mm}{dd}"
             else:
-                raise ValueError("出生日期格式錯誤，應為 YYYYMMDD")
+                raise ValueError("出生日期格式錯誤，應為 YYYYMMDD或YYYY/MM/DD")
         return value
 
     def generate_password(self):
@@ -61,9 +62,6 @@ class ManagerToken(BaseModel):
 
 class MemberToken(BaseModel):
     token: str
-
-class MemberQuery(BaseModel):
-    id: str
 
 class Record(BaseModel):
     member_id: str

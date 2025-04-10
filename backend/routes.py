@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Form, UploadFile, File
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import FileResponse
-from models import Member, Manager, LoginRequest, MemberQuery, ManagerToken, MemberToken, Record
+from models import Member, Manager, LoginRequest, ManagerToken, MemberToken, Record
 from pymongo import MongoClient
 from dotenv import load_dotenv
 from pathlib import Path
@@ -19,7 +19,7 @@ DATABASE_NAME = os.getenv("DATABASE_NAME")
 MEMBER_COLLECTION = os.getenv("MEMBER_COLLECTION")
 MANAGER_COLLECTION = os.getenv("MANAGER_COLLECTION")
 SECRET_KEY = os.getenv("SECRET_KEY")
-STORAGE_ROOT = os.getenv("STORAGE_ROOT")
+STORAGE_ROOT = os.getenv("STORAGE_ROOT","data")
 
 # 連接 MongoDB
 client = MongoClient(MONGO_URI)
@@ -246,9 +246,22 @@ def get_member_records(token: Union[MemberToken, ManagerToken], member_id: str):
 # 獲取成員基本資料
 @router.post("/member/Info")
 def get_member_info(token: Union[MemberToken, ManagerToken], member_id: str):
-    member_id = jwt.decode(token.token, SECRET_KEY, algorithms=["HS256"])["id"]
-    member = member_collection.find_one({"id": member_id}, {"_id": 0, "password": 0})
-    
+    # 解析 token 以獲取角色和 ID
+    decoded_token = jwt.decode(token.token, SECRET_KEY, algorithms=["HS256"])
+    user_id = decoded_token.get("id")  # 使用 .get() 確保不會拋出 KeyError
+    user_role = decoded_token.get("role")  # 使用 .get() 確保不會拋出 KeyError
+
+    # 檢查是否為管理者或該成員自己
+    if user_role == "manager":
+        # 管理者可以查看任何成員的紀錄
+        member = member_collection.find_one({"id": member_id}, {"_id": 0, "password": 0, "managerID": 0})
+    elif user_role == "member" and user_id == member_id:
+        # 成員只能查看自己的紀錄
+        member = member_collection.find_one({"id": member_id}, {"_id": 0, "password": 0, "managerID": 0})
+    else:
+        # 非法訪問：如果是成員但請求查看其他人的紀錄，則返回錯誤
+        raise HTTPException(status_code=403, detail="無權查看此成員資料")
+  
     if not member:
         raise HTTPException(status_code=404, detail="找不到該會員")
     
@@ -264,7 +277,6 @@ def ai_calculation(image_path: str):
     return {"brainAge": 45, "riskScore": 5}
 
 # 上傳拍攝記錄
-os.makedirs(BRAIN_IMAGE_DIR, exist_ok=True)
 @router.post("/upload/Record")
 def upload_record(
     managerToken: str = Form(...),
@@ -290,7 +302,7 @@ def upload_record(
         raise HTTPException(status_code=404, detail="找不到該成員")
 
     # **取得 RecordList 數量**
-    record_count = member.get("record_count", 0) + 1  # 取得當前記錄數量，+1 表示新的記錄
+    record_count = member.get("record_count") + 1  # 取得當前記錄數量，+1 表示新的記錄
 
     # **檢查檔案格式**
     file_extension = image_file.filename.split(".")[-1]
@@ -315,7 +327,7 @@ def upload_record(
         member_id=member_id,
         date=date,
         original_image_path=original_image_path,
-        folder_path=member_folder
+        folder_path=member_folder,
     )
     record.compute_actual_age(birthdate)
 
@@ -324,7 +336,7 @@ def upload_record(
         {"id": member_id},
         {
             "$push": {"RecordList": record.dict()},
-            "$set": {"record_count": record_count}  # 更新 RecordList 記錄數量
+            "$set": {"record_count": record_count},  # 更新 RecordList 記錄數量
         }
     )
 
