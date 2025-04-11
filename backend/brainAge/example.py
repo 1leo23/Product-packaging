@@ -51,9 +51,9 @@ def runModel(processed_path):
 
     return brain_age
 
-def main():
+def brain_age_calc(original_image_path):
     # 檢查並驗證輸入檔案路徑
-    path = r"D:\brainAgePrediction\Trajectory\aiModel\brainAge\samples\ADNI-sc-CN_I18211_90_F_.nii.gz"
+    path = original_image_path
     input_path = os.path.abspath(path)
     if not os.path.exists(input_path):
         print(f"錯誤: 檔案 {input_path} 不存在")
@@ -82,6 +82,3 @@ def main():
     # 輸出結果
     print(f"預測腦齡: {brain_age:.2f} 歲")
     return brain_age
-
-if __name__ == "__main__":
-    main()

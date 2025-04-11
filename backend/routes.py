@@ -6,6 +6,7 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 from pathlib import Path
 from typing import Union
+from brainAge.example import preprocessing, runModel
 import os
 import jwt
 import datetime
@@ -36,6 +37,20 @@ def create_jwt_token(data: dict, expires_delta: datetime.timedelta = datetime.ti
     expire = datetime.datetime.utcnow() + expires_delta
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm="HS256")
+
+# Token 驗證中間件
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+token_blacklist = set()
+def verify_token(token: str = Depends(oauth2_scheme)):
+    if token in token_blacklist:
+        raise HTTPException(status_code=401, detail="Token 已失效")
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token 已過期")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="無效的 Token")
 
 ### 管理員註冊 ###
 # 本地存儲路徑
@@ -90,6 +105,8 @@ def manager_signup(
     profile_image_path = os.path.join(MANAGER_PROFILE_DIR, f"{id}.jpg")
     with open(profile_image_path, "wb") as buffer:
         shutil.copyfileobj(profile_image_file.file, buffer)
+    path = os.path.join(BRAIN_IMAGE_DIR)
+
 
     # 存入資料庫
     new_manager = Manager(
@@ -258,19 +275,12 @@ def get_member_info(token: Union[MemberToken, ManagerToken], member_id: str):
     
     return member
 
-# AI 計算
-@router.post("/ai")
-def ai_calculation(image_path: str):
-    #假數據
-    return {"brainAge": 45, "riskScore": 5}
-
 # 上傳拍攝記錄
 @router.post("/upload/Record")
 def upload_record(
     managerToken: str = Form(...),
     member_id: str = Form(...),
     date: str = Form(...),
-    cognitve_test_score: int = Form(...),
     image_file: UploadFile = File(...)
 ):
     # **驗證管理員 Token**
@@ -292,6 +302,7 @@ def upload_record(
 
     # **取得 RecordList 數量**
     record_count = member.get("record_count") + 1  # 取得當前記錄數量，+1 表示新的記錄
+    record_id = f"record{str(record_count).zfill(3)}"
 
     # **檢查檔案格式**
     file_extension = image_file.filename.split(".")[-1]
@@ -314,6 +325,7 @@ def upload_record(
     birthdate = member["birthdate"]
     record = Record(
         member_id=member_id,
+        record_id=record_id,
         date=date,
         original_image_path=original_image_path,
         folder_path=member_folder,
@@ -331,25 +343,75 @@ def upload_record(
 
     return {"message": "成功上傳紀錄"}
 
+# AI 計算
+@router.post("/ai/{member_id}/{record_id}")
+def ai_brain_age(
+    member_id: str,
+    record_id: str,
+    manager_token: str = Form(...),
+):
+    result = member_collection.find_one(
+        {
+            "id": member_id,
+            "RecordList.record_id": record_id
+        },
+        {
+            "_id": 0,
+            "RecordList": {"$elemMatch": {"record_id": record_id}}
+        }
+    )
+
+    if not result or "RecordList" not in result or len(result["RecordList"]) == 0:
+        raise HTTPException(status_code=404, detail="找不到指定的紀錄")
+
+    record_data = result["RecordList"][0]
+    original_image_path = record_data["original_image_path"]
+
+    # === 2. 檢查檔案是否存在 ===
+    if not os.path.exists(original_image_path):
+        raise HTTPException(status_code=404, detail="原始影像不存在")
+
+    # === 3. 進行影像前處理與推論 ===
+    try:
+        preprocessing_path = preprocessing(original_image_path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"前處理失敗: {str(e)}")
+
+    destination_dir = os.path.dirname(original_image_path)
+    filename = os.path.basename(preprocessing_path)
+    destination_path = os.path.join(destination_dir, filename)
+    shutil.move(preprocessing_path, destination_path)
+
+    try:
+        brain_age = runModel(destination_path)
+        risk_score = 5  # TODO: 可改成風險計算邏輯
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"模型推論失敗: {str(e)}")
+
+    # === 4. 更新紀錄結果 ===
+    update_result = member_collection.update_one(
+        {"id": member_id, "RecordList.record_id": record_id},
+        {
+            "$set": {
+                "RecordList.$.brain_age": brain_age,
+                "RecordList.$.risk_score": risk_score
+            }
+        }
+    )
+
+    if update_result.modified_count == 0:
+        raise HTTPException(status_code=500, detail="結果寫入資料庫失敗")
+
+    return {
+        "message": "AI 預測完成",
+        "record_id": record_id,
+        "brainAge": brain_age,
+        "riskScore": risk_score
+    }
 
 # 登出
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-token_blacklist = set()
-
 @router.post("/Logout")
 def logout(token: str = Depends(oauth2_scheme)):
     # 將 Token 加入黑名單，讓它失效
     token_blacklist.add(token)
     return {"message": "登出成功，Token 已失效"}
-
-# Token 驗證中間件
-def verify_token(token: str = Depends(oauth2_scheme)):
-    if token in token_blacklist:
-        raise HTTPException(status_code=401, detail="Token 已失效")
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token 已過期")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="無效的 Token")

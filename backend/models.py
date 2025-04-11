@@ -65,6 +65,7 @@ class MemberToken(BaseModel):
 
 class Record(BaseModel):
     member_id: str
+    record_id: str
     date: str = Field(..., description="請輸入日期 (YYYYMMDD)")
     original_image_path: str  # 存儲本地路徑
     folder_path: str  # 存儲影像資料夾
