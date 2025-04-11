@@ -1,9 +1,48 @@
 import 'package:flutter/material.dart';
-import 'package:trajectory_app/const/constant.dart';
 import 'package:trajectory_app/cards/custom_card.dart';
 
-class UploadFormCard extends StatelessWidget {
-  const UploadFormCard({super.key});
+class UploadFormCard extends StatefulWidget {
+  final void Function(String memberId)?
+  loadUploadFromMemberPreview; // 為了預覽當先選定成員
+  const UploadFormCard({super.key, required this.loadUploadFromMemberPreview});
+
+  @override
+  State<UploadFormCard> createState() => _UploadFormCardState();
+}
+
+class _UploadFormCardState extends State<UploadFormCard> {
+  final _idController = TextEditingController();
+  final _idFocusNode = FocusNode();
+  final _dateController = TextEditingController();
+  final _fileController = TextEditingController();
+  final _actualAgeController = TextEditingController();
+  final _brainAgeController = TextEditingController();
+  final _riskScoreController = TextEditingController();
+
+  void dispose() {
+    _idController.dispose();
+    _idFocusNode.dispose();
+    _dateController.dispose();
+    _fileController.dispose();
+    _actualAgeController.dispose();
+    _brainAgeController.dispose();
+    _riskScoreController.dispose();
+    widget.loadUploadFromMemberPreview?.call('');
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    _idFocusNode.addListener(() {
+      if (!_idFocusNode.hasFocus) {
+        String memberId = _idController.text;
+        widget.loadUploadFromMemberPreview?.call(memberId);
+        print("偵測id輸入成功");
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,9 +62,16 @@ class UploadFormCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            _buildInputRow('身份證字號', '身份證字號', true),
+            _buildInputRow(
+              '身份證字號',
+              '身份證字號',
+              true,
+              controller: _idController,
+              focusNode: _idFocusNode,
+            ),
             _buildInputRow('拍攝日期', 'YYYY/MM/DD', true),
             _buildInputRow('上傳檔案', '上傳檔案 nii.gz', true),
+            _buildInputRow('認知測驗', '認知測驗成績(0~100)', true),
             _buildInputRow('實際年齡', '實際年齡 (自動填入)', false),
             _buildInputRow('腦部年齡', '腦部年齡 (AI計算)', false),
             _buildInputRow('失智症風險', '失智症風險 (AI計算)', false),
@@ -88,7 +134,13 @@ class UploadFormCard extends StatelessWidget {
   }
 }
 
-Widget _buildInputRow(String label, String hint, bool enabled) {
+Widget _buildInputRow(
+  String label,
+  String hint,
+  bool enabled, {
+  TextEditingController? controller,
+  FocusNode? focusNode,
+}) {
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 8.0),
     child: Row(
@@ -102,6 +154,8 @@ Widget _buildInputRow(String label, String hint, bool enabled) {
           height: 40,
           width: 250,
           child: TextField(
+            focusNode: focusNode,
+            controller: controller,
             enabled: enabled,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(

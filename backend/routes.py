@@ -421,3 +421,16 @@ def logout(token: str = Depends(oauth2_scheme)):
     # 將 Token 加入黑名單，讓它失效
     token_blacklist.add(token)
     return {"message": "登出成功，Token 已失效"}
+
+# Token 驗證中間件
+def verify_token(token: str = Depends(oauth2_scheme)):
+    if token in token_blacklist:
+        raise HTTPException(status_code=401, detail="Token 已失效")
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token 已過期")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="無效的 Token")
+            

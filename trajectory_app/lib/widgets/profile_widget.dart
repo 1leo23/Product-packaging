@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:trajectory_app/const/constant.dart';
 import 'package:trajectory_app/models/manager_model.dart';
@@ -6,14 +8,18 @@ import 'package:trajectory_app/services/api_service.dart';
 
 class ProfileWidget extends StatelessWidget {
   final String type;
+  final bool usingLocalImage;
+  final File? localImage;
   final MemberModel member;
   final ManagerModel manager;
 
   const ProfileWidget({
     super.key,
     required this.type,
+    required this.usingLocalImage,
     this.member = const MemberModel(),
     this.manager = const ManagerModel(),
+    this.localImage,
   });
 
   @override
@@ -34,16 +40,35 @@ class ProfileWidget extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          type == 'manager'
-              ? _managerProfileImage(manager)
-              : _memberProfileImage(member),
-
+          usingLocalImage == false
+              ? (type ==
+                      'manager' // 沒有本地路徑的話就網路上找
+                  ? _managerProfileImage(manager)
+                  : _memberProfileImage(member))
+              : _localProfileImage(member, localImage), // 有本地路徑就從本地抓圖片
           const SizedBox(height: 20),
           type == 'manager' ? _managerInfo(manager) : _memberInfo(member),
         ],
       ),
     );
   }
+}
+
+Widget _localProfileImage(MemberModel member, File? localImage) {
+  return Container(
+    width: 180,
+    height: 180,
+    padding: const EdgeInsets.all(5),
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      border: Border.all(color: selectionColor, width: 2),
+    ),
+    child: CircleAvatar(
+      radius: 64,
+      backgroundColor: Colors.transparent,
+      backgroundImage: localImage != null ? FileImage(localImage) : null,
+    ),
+  );
 }
 
 Widget _managerProfileImage(ManagerModel manager) {

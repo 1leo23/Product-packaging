@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:trajectory_app/const/constant.dart';
 import 'package:trajectory_app/models/manager_model.dart';
@@ -34,29 +36,50 @@ class _ManagerScreenState extends State<ManagerScreen> {
   // 更新 mainWidgetList，將回調傳給 AddMemberWidget
   late final List<Widget> mainWidgetList = [
     const MemberListWidget(),
-    const UploadFormWidget(),
-    AddMemberWidget(onMemberAdded: loadManagerInfo), // 傳遞回調
+    UploadFormWidget(loadUploadFromMemberPreview: loadUploadFromMemberPreview),
+    AddMemberWidget(
+      loadManagerInfo: loadManagerInfo,
+      loaAddMemberMemberPreview: loaAddMemberMemberPreview,
+    ), // 傳遞回調
   ];
   List<Widget> profileWidgetList = [
-    const ProfileWidget(type: 'manager'), // 成員管理頁
-    const ProfileWidget(type: 'member'), // 上傳影像頁
-    const ProfileWidget(type: 'member'), // 新增成員頁
+    const ProfileWidget(type: 'manager', usingLocalImage: false), // 成員管理頁
+    const ProfileWidget(type: 'member', usingLocalImage: false), // 上傳影像頁
+    const ProfileWidget(type: 'member', usingLocalImage: false), // 新增成員頁
   ];
+
+  void loadUploadFromMemberPreview(String memberId) async {
+    final memberModel = await ApiService.getMemberInfo(memberId);
+    setState(() {
+      // 成員管理頁
+      profileWidgetList[1] = ProfileWidget(
+        type: 'member',
+        member: memberModel,
+        usingLocalImage: false,
+      );
+    });
+  }
+
+  void loaAddMemberMemberPreview(MemberModel memberModel, File? localImage) {
+    setState(() {
+      profileWidgetList[2] = ProfileWidget(
+        type: 'member',
+        usingLocalImage: true,
+        member: memberModel,
+        localImage: localImage,
+      );
+    });
+  }
+
   void loadManagerInfo() async {
     final managerModel = await ApiService.getManagerInfo();
     setState(() {
       // 成員管理頁
       profileWidgetList[0] = ProfileWidget(
         type: 'manager',
+        usingLocalImage: false,
         manager: managerModel,
       );
-    });
-  }
-
-  void updateMemberPreview(MemberModel memberModel) {
-    setState(() {
-      // 新增成員頁
-      profileWidgetList[2] = ProfileWidget(type: 'member', member: memberModel);
     });
   }
 

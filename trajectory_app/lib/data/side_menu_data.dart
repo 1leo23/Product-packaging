@@ -9,9 +9,9 @@ class SideMenuData {
     MenuModel(icon: Icons.logout, title: '登出'),
   ];
   final managerMenu = const <MenuModel>[
-    MenuModel(icon: Icons.person, title: '成員管理'),
-    MenuModel(icon: Icons.history, title: '上傳影像'),
-    MenuModel(icon: Icons.run_circle, title: '新增成員'),
+    MenuModel(icon: Icons.manage_accounts, title: '成員管理'),
+    MenuModel(icon: Icons.upload_file, title: '上傳影像'),
+    MenuModel(icon: Icons.person_add_alt_1, title: '新增成員'),
     MenuModel(icon: Icons.logout, title: '登出'),
   ];
 }
