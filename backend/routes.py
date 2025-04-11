@@ -6,7 +6,7 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 from pathlib import Path
 from typing import Union, Optional
-from brainAge.example import preprocessing, runModel
+from example import preprocessing, runModel
 import os
 import jwt
 import datetime
@@ -331,7 +331,7 @@ def upload_record(
 
     # === 前處理 ===
     try:
-        preprocessing_path = preprocessing(original_image_path)
+        preprocessing_path = preprocessing(OG_image_path)
         if not preprocessing_path:
             raise ValueError("前處理未回傳任何路徑")
     except Exception as e:
