@@ -50,6 +50,7 @@ class _ManagerScreenState extends State<ManagerScreen> {
 
   void loadUploadFromMemberPreview(String memberId) async {
     final memberModel = await ApiService.getMemberInfo(memberId);
+    if (!mounted) return; // <--- 這行是關鍵 避免頁面被刪除還呼叫初始化
     setState(() {
       // 成員管理頁
       profileWidgetList[1] = ProfileWidget(
