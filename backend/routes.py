@@ -344,21 +344,25 @@ def upload_record(
     return {"message": "成功上傳紀錄"}
 
 # AI 計算
-@router.post("/ai/{member_id}/{record_id}")
+@router.post("/ai/{member_id}")
 def ai_brain_age(
     member_id: str,
-    record_id: str,
-    manager_token: str = Form(...),
+    record_count: int,
+    manager_token: str = Form(...)
 ):
+    # === 驗證角色 ===
+    decoded_token = jwt.decode(manager_token, SECRET_KEY, algorithms=["HS256"])
+    user_role = decoded_token.get("role")
+    if user_role != "manager":
+        raise HTTPException(status_code=403, detail="此功能僅限醫生使用")
+
+    # === 組合 record_id ===
+    record_id = f"record{str(record_count).zfill(3)}"
+
+    # === 查詢指定紀錄 ===
     result = member_collection.find_one(
-        {
-            "id": member_id,
-            "RecordList.record_id": record_id
-        },
-        {
-            "_id": 0,
-            "RecordList": {"$elemMatch": {"record_id": record_id}}
-        }
+        {"id": member_id},
+        {"_id": 0, "RecordList": {"$elemMatch": {"record_id": record_id}}}
     )
 
     if not result or "RecordList" not in result or len(result["RecordList"]) == 0:
@@ -367,13 +371,14 @@ def ai_brain_age(
     record_data = result["RecordList"][0]
     original_image_path = record_data["original_image_path"]
 
-    # === 2. 檢查檔案是否存在 ===
     if not os.path.exists(original_image_path):
         raise HTTPException(status_code=404, detail="原始影像不存在")
 
-    # === 3. 進行影像前處理與推論 ===
+    # === 前處理 ===
     try:
         preprocessing_path = preprocessing(original_image_path)
+        if not preprocessing_path:
+            raise ValueError("前處理未回傳任何路徑")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"前處理失敗: {str(e)}")
 
@@ -382,13 +387,14 @@ def ai_brain_age(
     destination_path = os.path.join(destination_dir, filename)
     shutil.move(preprocessing_path, destination_path)
 
+    # === 推論 ===
     try:
         brain_age = runModel(destination_path)
-        risk_score = 5  # TODO: 可改成風險計算邏輯
+        risk_score = 5  # TODO: 改成真實邏輯
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"模型推論失敗: {str(e)}")
 
-    # === 4. 更新紀錄結果 ===
+    # === 更新紀錄 ===
     update_result = member_collection.update_one(
         {"id": member_id, "RecordList.record_id": record_id},
         {
