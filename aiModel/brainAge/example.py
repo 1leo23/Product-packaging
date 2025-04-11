@@ -53,7 +53,7 @@ def runModel(processed_path):
 
 def main():
     # 檢查並驗證輸入檔案路徑
-    path = r"D:\brainAgePrediction\Trajectory\aiModel\brainAge\samples\ADNI-sc-CN_I18211_90_F_.nii.gz"
+    path = r"C:\Users\User\Desktop\冠智\C 大學\C 三年級\A 專題\fastapi\github\Product-packaging\aiModel\brainAge\samples\ADNI-sc-CN_I18211_90_F_.nii.gz"
     input_path = os.path.abspath(path)
     if not os.path.exists(input_path):
         print(f"錯誤: 檔案 {input_path} 不存在")
