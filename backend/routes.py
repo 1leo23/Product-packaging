@@ -203,7 +203,8 @@ def get_manager_info(manager_token: ManagerToken):
 @router.post("/manager/MemberList")
 def get_member_list(manager_token: ManagerToken):
     manager_id = jwt.decode(manager_token.token, SECRET_KEY, algorithms=["HS256"])["id"]
-    members = member_collection.find({"managerID": manager_id}, {"_id": 0, "password": 0})
+    members_cursor= member_collection.find({"managerID": manager_id}, {"_id": 0, "password": 0})
+    members=list(members_cursor)
     
     return members
 
