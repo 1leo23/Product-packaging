@@ -17,7 +17,10 @@ class MemberScreen extends StatefulWidget {
 
 class _MemberScreenState extends State<MemberScreen> {
   int _selectedIndex = 0;
-  ProfileWidget profileWidget = const ProfileWidget(type: 'member');
+  ProfileWidget profileWidget = const ProfileWidget(
+    type: 'member',
+    usingLocalImage: false,
+  );
   void onMenuTap(int index) {
     setState(() {
       if (index == 3) {
@@ -32,7 +35,11 @@ class _MemberScreenState extends State<MemberScreen> {
     final memberModel = await ApiService.getMemberInfo(widget.memberId);
     setState(() {
       // **這裡要重新建立 profileWidgetList，確保 UI 會更新**
-      profileWidget = ProfileWidget(type: 'member', member: memberModel);
+      profileWidget = ProfileWidget(
+        type: 'member',
+        member: memberModel,
+        usingLocalImage: false,
+      );
     });
   }
 

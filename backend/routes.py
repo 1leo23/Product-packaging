@@ -363,4 +363,5 @@ def verify_token(token: str = Depends(oauth2_scheme)):
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token 已過期")
     except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="無效的 Token")
+        raise HTTPException(status_code=401, detail="無效的 Token")\
+            
