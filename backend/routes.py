@@ -5,13 +5,21 @@ from models import Member, Manager, LoginRequest, ManagerToken, MemberToken, Rec
 from pymongo import MongoClient
 from dotenv import load_dotenv
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
 from brainAge.example import preprocessing, runModel
 import os
 import jwt
 import datetime
 import shutil
 import re
+
+# 假模型(RiskScore)
+def RiskScore(MASE_score: int,original_image_path: str,actual_age: str,sex: str):
+    MASE_score = MASE_score
+    original_image_path = original_image_path
+    actual_age = actual_age
+    sex = sex
+    return 5
 
 # 載入 .env 環境變數
 load_dotenv()
@@ -275,15 +283,16 @@ def get_member_info(token: Union[MemberToken, ManagerToken], member_id: str):
     
     return member
 
-# 上傳拍攝記錄
+# 上傳拍攝記錄 + 前處理
 @router.post("/upload/Record")
 def upload_record(
     managerToken: str = Form(...),
     member_id: str = Form(...),
     date: str = Form(...),
+    MASE_score: Optional[int] = Form(None),
     image_file: UploadFile = File(...)
 ):
-    # **驗證管理員 Token**
+    # === 驗證管理員 Token ===
     try:
         manager_data = jwt.decode(managerToken, SECRET_KEY, algorithms=["HS256"])
         manager_id = manager_data["id"]
@@ -295,55 +304,77 @@ def upload_record(
     if not manager_collection.find_one({"id": manager_id}):
         raise HTTPException(status_code=401, detail="無效的管理員 Token")
 
-    # **確認成員是否存在**
+    # === 確認成員是否存在 ===
     member = member_collection.find_one({"id": member_id})
     if not member:
         raise HTTPException(status_code=404, detail="找不到該成員")
 
-    # **取得 RecordList 數量**
-    record_count = member.get("record_count") + 1  # 取得當前記錄數量，+1 表示新的記錄
+    # === 組合資料路徑與檔案 ===
+    record_count = member.get("record_count") + 1
     record_id = f"record{str(record_count).zfill(3)}"
 
-    # **檢查檔案格式**
-    file_extension = image_file.filename.split(".")[-1]
-    if file_extension not in ["nii", "gz"]:
+    filename = image_file.filename.lower()
+    if not (filename.endswith(".nii") or filename.endswith(".nii.gz")):
         raise HTTPException(status_code=400, detail="檔案格式錯誤，僅支援 .nii 和 .nii.gz")
 
-    # **設定 folder_path**
-    member_folder = os.path.join(BRAIN_IMAGE_DIR, f"{member_id}_{record_count}")
+    member_folder = os.path.join(BRAIN_IMAGE_DIR, f"{member_id}_{str(record_count).zfill(3)}")
     os.makedirs(member_folder, exist_ok=True)
-    
-    # **儲存檔案**
-    if file_extension == "gz":
-        original_image_path = os.path.join(member_folder, "original.nii.gz")
+
+    # === 儲存原始影像 ===
+    if filename.endswith(".nii.gz"):
+        OG_image_path = os.path.join(member_folder, "original.nii.gz")
     else:
-        original_image_path = os.path.join(member_folder, "original.nii")
-    with open(original_image_path, "wb") as buffer:
+        OG_image_path = os.path.join(member_folder, "original.nii")
+
+    with open(OG_image_path, "wb") as buffer:
         shutil.copyfileobj(image_file.file, buffer)
 
-    # **計算實際年齡**
+    # === 前處理 ===
+    try:
+        preprocessing_path = preprocessing(original_image_path)
+        if not preprocessing_path:
+            raise ValueError("前處理未回傳任何路徑")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"前處理失敗: {str(e)}")
+
+    # === 搬移並重新命名為 preprocessing.nii(.gz) ===
+    if preprocessing_path.endswith(".nii.gz"):
+        new_filename = "preprocessing.nii.gz"
+    elif preprocessing_path.endswith(".nii"):
+        new_filename = "preprocessing.nii"
+    else:
+        raise HTTPException(status_code=400, detail="預處理檔案格式錯誤")
+
+    destination_path = os.path.join(member_folder, new_filename)
+
+    try:
+        shutil.move(preprocessing_path, destination_path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"搬移預處理檔案失敗: {str(e)}")
+
+    # === 計算實際年齡與建構 Record ===
     birthdate = member["birthdate"]
     record = Record(
         member_id=member_id,
         record_id=record_id,
         date=date,
-        original_image_path=original_image_path,
+        MASE_score=MASE_score,
         folder_path=member_folder,
     )
     record.compute_actual_age(birthdate)
 
-    # **存入資料庫**
+    # === 寫入資料庫 ===
     member_collection.update_one(
         {"id": member_id},
         {
             "$push": {"RecordList": record.dict()},
-            "$set": {"record_count": record_count},  # 更新 RecordList 記錄數量
+            "$set": {"record_count": record_count}
         }
     )
 
-    return {"message": "成功上傳紀錄"}
+    return {"message": "成功上傳紀錄並完成前處理"}
 
-# AI 計算
+# AI 推論（模型 + 風險）
 @router.post("/ai/{member_id}")
 def ai_brain_age(
     member_id: str,
@@ -359,7 +390,7 @@ def ai_brain_age(
     # === 組合 record_id ===
     record_id = f"record{str(record_count).zfill(3)}"
 
-    # === 查詢指定紀錄 ===
+    # === 查詢紀錄資料 ===
     result = member_collection.find_one(
         {"id": member_id},
         {"_id": 0, "RecordList": {"$elemMatch": {"record_id": record_id}}}
@@ -369,32 +400,47 @@ def ai_brain_age(
         raise HTTPException(status_code=404, detail="找不到指定的紀錄")
 
     record_data = result["RecordList"][0]
-    original_image_path = record_data["original_image_path"]
+    folder_path = record_data["folder_path"]
+    actual_age = record_data["actual_age"]
+    MASE_score = record_data.get("MASE_score")
+    if os.path.exists(os.path.join(folder_path, "original.nii.gz")):
+        OG_image_path = os.path.join(folder_path, "original.nii.gz")
+    elif os.path.exists(os.path.join(folder_path, "original.nii")):
+        OG_image_path = os.path.join(folder_path, "original.nii")
+    else:
+        raise HTTPException(status_code=404, detail="找不到原始MRI檔案")
 
-    if not os.path.exists(original_image_path):
-        raise HTTPException(status_code=404, detail="原始影像不存在")
+    sex = member_collection.find_one(
+        {"id": member_id},
+        {"_id": 0, "sex": 1}
+    ).get("sex")
 
-    # === 前處理 ===
+    # === 使用 preprocessing.nii(.gz) 作推論輸入 ===
+    if os.path.exists(os.path.join(folder_path, "preprocessing.nii.gz")):
+        PP_image_path = os.path.join(folder_path, "preprocessing.nii.gz")
+    elif os.path.exists(os.path.join(folder_path, "preprocessing.nii")):
+        PP_image_path = os.path.join(folder_path, "preprocessing.nii")
+    else:
+        raise HTTPException(status_code=404, detail="找不到預處理檔案")
+
+    # === 模型推論與風險分數 ===
     try:
-        preprocessing_path = preprocessing(original_image_path)
-        if not preprocessing_path:
-            raise ValueError("前處理未回傳任何路徑")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"前處理失敗: {str(e)}")
+        brain_age = runModel(PP_image_path)
 
-    destination_dir = os.path.dirname(original_image_path)
-    filename = os.path.basename(preprocessing_path)
-    destination_path = os.path.join(destination_dir, filename)
-    shutil.move(preprocessing_path, destination_path)
+        if MASE_score is not None:
+            risk_score = RiskScore(
+                MASE_score=MASE_score,
+                OG_image_path=OG_image_path,
+                actual_age=actual_age,
+                sex=sex
+            )
+        else:
+            risk_score = None
 
-    # === 推論 ===
-    try:
-        brain_age = runModel(destination_path)
-        risk_score = 5  # TODO: 改成真實邏輯
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"模型推論失敗: {str(e)}")
 
-    # === 更新紀錄 ===
+    # === 寫入預測結果 ===
     update_result = member_collection.update_one(
         {"id": member_id, "RecordList.record_id": record_id},
         {

@@ -67,11 +67,11 @@ class Record(BaseModel):
     member_id: str
     record_id: str
     date: str = Field(..., description="請輸入日期 (YYYYMMDD)")
-    original_image_path: str  # 存儲本地路徑
     folder_path: str  # 存儲影像資料夾
     brain_age: Optional[int] = None
     actual_age: Optional[int] = None
-    risk_score: Optional[int] = 0
+    MASE_score: Optional[int] = None
+    risk_score: Optional[int] = None
 
     @validator("date")
     def validate_and_format_date(cls, value):
