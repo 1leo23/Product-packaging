@@ -6,7 +6,9 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 from pathlib import Path
 from typing import Union, Optional
-from example import preprocessing, runModel
+from BrainAge.BrainAge import preprocessing
+from BrainAge.BrainAge import runModel as runBrainage
+from AD_prediction.AD_prediction import runModel as runpreAD
 import os
 import jwt
 import datetime
@@ -87,7 +89,7 @@ def get_member_profile(member_id: str):
 
     return FileResponse(profile_path)
 
-# 管理員註冊
+### 管理員註冊 ###
 @router.post("/manager/Manager_Signup")
 def manager_signup(
     id: str = Form(...),
@@ -204,7 +206,7 @@ def get_member_list(manager_token: ManagerToken):
     members = list(members_cursor)
     return members
 
-# 成員登入
+### 成員登入 ###
 @router.post("/member/Signin")
 def member_signin(signin_data: LoginRequest):
     member = member_collection.find_one({"id": signin_data.id})
@@ -222,7 +224,7 @@ def member_signin(signin_data: LoginRequest):
     member_token = create_jwt_token({"id": signin_data.id, "role": "member"})
     return {"member_token": member_token, "message": f"{signin_data.id} 成功登入"}
 
-# 成員拍攝紀錄
+### 取得成員拍攝紀錄 ###
 @router.post("/member/RecordsList")
 def get_member_records(token: Union[MemberToken, ManagerToken], member_id: str):
     # 解析 token 以獲取角色和 ID
@@ -247,8 +249,7 @@ def get_member_records(token: Union[MemberToken, ManagerToken], member_id: str):
     # 根據日期排序紀錄
     return sorted(records.get("RecordList", []), key=lambda x: x["date"])
 
-
-# 獲取成員基本資料
+### 獲取單一成員基本資料 ###
 @router.post("/member/Info")
 def get_member_info(token: Union[MemberToken, ManagerToken], member_id: str):
     # 解析 token 以獲取角色和 ID
@@ -272,7 +273,8 @@ def get_member_info(token: Union[MemberToken, ManagerToken], member_id: str):
     
     return member
 
-# 上傳拍攝記錄 + 前處理
+### 上傳拍攝記錄 + 前處理 ###
+## bottom：建立紀錄 ##
 @router.post("/upload/Record")
 def upload_record(
     managerToken: str = Form(...),
@@ -303,15 +305,14 @@ def upload_record(
     record_id = f"record{str(record_count).zfill(3)}"
 
     filename = image_file.filename.lower()
-    if not (filename.endswith(".nii") or filename.endswith(".nii.gz")):
-        raise HTTPException(status_code=400, detail="檔案格式錯誤，僅支援 .nii 和 .nii.gz")
+    if not filename.endswith(".nii.gz"):
+        raise HTTPException(status_code=400, detail="檔案格式錯誤，僅支援 .nii.gz")
 
     member_folder = os.path.join(BRAIN_IMAGE_DIR, f"{member_id}_{str(record_count).zfill(3)}")
     os.makedirs(member_folder, exist_ok=True)
 
     # === 儲存原始影像 ===
-    if filename.endswith(".nii.gz"):
-        OG_image_path = os.path.join(member_folder, "original.nii.gz")
+    OG_image_path = os.path.join(member_folder, "original.nii.gz")
 
     with open(OG_image_path, "wb") as buffer:
         shutil.copyfileobj(image_file.file, buffer)
@@ -324,7 +325,7 @@ def upload_record(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"前處理失敗: {str(e)}")
 
-    # === 搬移並重新命名為 preprocessing.nii(.gz) ===
+    # === 搬移並重新命名為 preprocessing.nii.gz ===
     if preprocessing_path.endswith(".nii.gz"):
         new_filename = "preprocessing.nii.gz"
     else:
@@ -359,7 +360,8 @@ def upload_record(
 
     return {"message": "成功上傳紀錄並完成前處理"}
 
-# AI 推論（模型 + 風險）
+### AI 推論（模型 + 風險）###
+## bottom：AI計算 ##
 @router.post("/ai/{member_id}")
 def ai_brain_age(
     member_id: str,
@@ -406,10 +408,10 @@ def ai_brain_age(
 
     # === 模型推論與風險分數 ===
     try:
-        brain_age = runModel(PP_image_path)
+        brain_age = runBrainage(PP_image_path)
 
         if MASE_score is not None:
-            risk_score = RiskScore(
+            risk_score = runpreAD(
                 MASE_score=MASE_score,
                 OG_image_path=OG_image_path,
                 actual_age=actual_age,
@@ -442,7 +444,10 @@ def ai_brain_age(
         "riskScore": risk_score
     }
 
-# 登出
+### 2D切片+儲存結果 ###
+## bottom：儲存 ##
+
+### 登出 ###
 @router.post("/Logout")
 def logout(token: str = Depends(oauth2_scheme)):
     # 將 Token 加入黑名單，讓它失效
