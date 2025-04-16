@@ -13,14 +13,6 @@ import datetime
 import shutil
 import re
 
-# 假模型(RiskScore)
-def RiskScore(MASE_score: int,original_image_path: str,actual_age: str,sex: str):
-    MASE_score = MASE_score
-    original_image_path = original_image_path
-    actual_age = actual_age
-    sex = sex
-    return 5
-
 # 載入 .env 環境變數
 load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
@@ -60,7 +52,6 @@ def verify_token(token: str = Depends(oauth2_scheme)):
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="無效的 Token")
 
-### 管理員註冊 ###
 # 本地存儲路徑
 MANAGER_PROFILE_DIR = os.path.join(STORAGE_ROOT, "manager_profile")
 os.makedirs(MANAGER_PROFILE_DIR, exist_ok=True)
@@ -115,7 +106,6 @@ def manager_signup(
         shutil.copyfileobj(profile_image_file.file, buffer)
     path = os.path.join(BRAIN_IMAGE_DIR)
 
-
     # 存入資料庫
     new_manager = Manager(
         id=id,
@@ -128,7 +118,6 @@ def manager_signup(
     manager_collection.insert_one(new_manager.dict())
 
     return {"message": "醫師註冊成功"}
-
 
 ### 管理員登入 ###
 @router.post("/manager/Signin")
@@ -323,8 +312,6 @@ def upload_record(
     # === 儲存原始影像 ===
     if filename.endswith(".nii.gz"):
         OG_image_path = os.path.join(member_folder, "original.nii.gz")
-    else:
-        OG_image_path = os.path.join(member_folder, "original.nii")
 
     with open(OG_image_path, "wb") as buffer:
         shutil.copyfileobj(image_file.file, buffer)
@@ -340,8 +327,6 @@ def upload_record(
     # === 搬移並重新命名為 preprocessing.nii(.gz) ===
     if preprocessing_path.endswith(".nii.gz"):
         new_filename = "preprocessing.nii.gz"
-    elif preprocessing_path.endswith(".nii"):
-        new_filename = "preprocessing.nii"
     else:
         raise HTTPException(status_code=400, detail="預處理檔案格式錯誤")
 
@@ -405,8 +390,6 @@ def ai_brain_age(
     MASE_score = record_data.get("MASE_score")
     if os.path.exists(os.path.join(folder_path, "original.nii.gz")):
         OG_image_path = os.path.join(folder_path, "original.nii.gz")
-    elif os.path.exists(os.path.join(folder_path, "original.nii")):
-        OG_image_path = os.path.join(folder_path, "original.nii")
     else:
         raise HTTPException(status_code=404, detail="找不到原始MRI檔案")
 
@@ -418,8 +401,6 @@ def ai_brain_age(
     # === 使用 preprocessing.nii(.gz) 作推論輸入 ===
     if os.path.exists(os.path.join(folder_path, "preprocessing.nii.gz")):
         PP_image_path = os.path.join(folder_path, "preprocessing.nii.gz")
-    elif os.path.exists(os.path.join(folder_path, "preprocessing.nii")):
-        PP_image_path = os.path.join(folder_path, "preprocessing.nii")
     else:
         raise HTTPException(status_code=404, detail="找不到預處理檔案")
 
