@@ -6,9 +6,10 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 from pathlib import Path
 from typing import Union, Optional
-from BrainAge.BrainAge import preprocessing
-from BrainAge.BrainAge import runModel as runBrainage
-from AD_prediction.AD_prediction import runModel as runpreAD
+from BrainAge.BrainAge import runPreprocessing
+from BrainAge.BrainAge import runBrainage
+from AD_prediction.AD_prediction import runModel as runPreAD
+from nii_to_2D.nii_to_2D import runModel as runSlice
 import os
 import jwt
 import datetime
@@ -88,6 +89,45 @@ def get_member_profile(member_id: str):
         raise HTTPException(status_code=404, detail="個人照不存在")
 
     return FileResponse(profile_path)
+
+@router.get("/slice/{member_id}/{record_count}/{plane}/{index}")
+def get_slice_image(
+    member_id: str,
+    record_count: int,
+    plane: str,
+    index: int
+):
+    """
+    根據 member_id + record_count + plane + index 回傳對應切片圖檔：
+    - plane: 'sagittal' | 'coronal' | 'axial'
+    - index: 圖檔編號（整數）
+    """
+    record_id = f"record{str(record_count).zfill(3)}"
+
+    # === 查詢該筆紀錄資料 ===
+    result = member_collection.find_one(
+        {"id": member_id},
+        {"_id": 0, "RecordList": {"$elemMatch": {"record_id": record_id}}}
+    )
+    if not result or "RecordList" not in result or len(result["RecordList"]) == 0:
+        raise HTTPException(status_code=404, detail="找不到指定的紀錄")
+
+    record = result["RecordList"][0]
+    folder_path = record["folder_path"]
+
+    # === 判別 plane 子資料夾 ===
+    plane = plane.lower()
+    if plane not in {"sagittal", "coronal", "axial"}:
+        raise HTTPException(status_code=400, detail="plane 參數錯誤，請使用 sagittal、coronal 或 axial")
+
+    # === 組合檔案路徑 ===
+    png_filename = f"{index:03d}.png"
+    png_path = os.path.join(folder_path, plane, png_filename)
+
+    if not os.path.exists(png_path):
+        raise HTTPException(status_code=404, detail="找不到指定的切片圖檔")
+
+    return FileResponse(png_path, media_type="image/png")
 
 ### 管理員註冊 ###
 @router.post("/manager/Manager_Signup")
@@ -280,7 +320,7 @@ def upload_record(
     managerToken: str = Form(...),
     member_id: str = Form(...),
     date: str = Form(...),
-    MASE_score: Optional[int] = Form(None),
+    MSSE_score: Optional[int] = Form(None),
     image_file: UploadFile = File(...)
 ):
     # === 驗證管理員 Token ===
@@ -319,7 +359,7 @@ def upload_record(
 
     # === 前處理 ===
     try:
-        preprocessing_path = preprocessing(OG_image_path)
+        preprocessing_path = runPreprocessing(OG_image_path)
         if not preprocessing_path:
             raise ValueError("前處理未回傳任何路徑")
     except Exception as e:
@@ -344,7 +384,7 @@ def upload_record(
         member_id=member_id,
         record_id=record_id,
         date=date,
-        MASE_score=MASE_score,
+        MSSE_score=MSSE_score,
         folder_path=member_folder,
     )
     record.compute_actual_age(birthdate)
@@ -389,7 +429,7 @@ def ai_brain_age(
     record_data = result["RecordList"][0]
     folder_path = record_data["folder_path"]
     actual_age = record_data["actual_age"]
-    MASE_score = record_data.get("MASE_score")
+    MSSE_score = record_data.get("MSSE_score")
     if os.path.exists(os.path.join(folder_path, "original.nii.gz")):
         OG_image_path = os.path.join(folder_path, "original.nii.gz")
     else:
@@ -410,9 +450,9 @@ def ai_brain_age(
     try:
         brain_age = runBrainage(PP_image_path)
 
-        if MASE_score is not None:
-            risk_score = runpreAD(
-                MASE_score=MASE_score,
+        if MSSE_score is not None:
+            risk_score = runPreAD(
+                MSSE_score=MSSE_score,
                 OG_image_path=OG_image_path,
                 actual_age=actual_age,
                 sex=sex
@@ -446,6 +486,40 @@ def ai_brain_age(
 
 ### 2D切片+儲存結果 ###
 ## bottom：儲存 ##
+@router.post("/ai/restore/{member_id}")
+def ai_brain_age(
+    member_id: str,
+    record_count: int,
+    manager_token: str = Form(...)
+):
+    # === 驗證角色 ===
+    decoded_token = jwt.decode(manager_token, SECRET_KEY, algorithms=["HS256"])
+    user_role = decoded_token.get("role")
+    if user_role != "manager":
+        raise HTTPException(status_code=403, detail="此功能僅限醫生使用")
+
+    # === 組合 record_id ===
+    record_id = f"record{str(record_count).zfill(3)}"
+    # === 查詢紀錄資料 ===
+    result = member_collection.find_one(
+        {"id": member_id},
+        {"_id": 0, "RecordList": {"$elemMatch": {"record_id": record_id}}}
+    )
+
+    if not result or "RecordList" not in result or len(result["RecordList"]) == 0:
+        raise HTTPException(status_code=404, detail="找不到指定的紀錄")
+
+    record_data = result["RecordList"][0]
+    folder_path = record_data["folder_path"]
+    if os.path.exists(os.path.join(folder_path, "original.nii.gz")):
+        OG_image_path = os.path.join(folder_path, "original.nii.gz")
+    else:
+        raise HTTPException(status_code=404, detail="找不到原始MRI檔案")
+    
+    try:
+        runSlice(OG_image_path,folder_path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"切片失敗: {str(e)}")
 
 ### 登出 ###
 @router.post("/Logout")

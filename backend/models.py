@@ -70,8 +70,8 @@ class Record(BaseModel):
     folder_path: str  # 存儲影像資料夾
     brain_age: Optional[int] = None
     actual_age: Optional[int] = None
-    MASE_score: Optional[int] = None
-    risk_score: Optional[int] = None
+    MSSE_score: Optional[int] = None
+    risk_score: Optional[str] = None
 
     @validator("date")
     def validate_and_format_date(cls, value):

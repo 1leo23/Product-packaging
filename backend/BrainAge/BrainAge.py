@@ -2,20 +2,22 @@ import os
 import sys
 import subprocess
 
-def preprocessing(input_path):
-    """使用 env_processing 環境執行 processing.py 並取得前處理結果的檔案路徑"""
+def runPreprocessing(input_path):
+    """從 BrainAge.py 呼叫 BrainAge/preprocessing.py，並傳入影像路徑"""
+    base_dir = os.path.dirname(os.path.abspath(__file__))  # 指向 backend/BrainAge/
+    script_path = os.path.join(base_dir, "preprocessing.py")
+
     try:
         result = subprocess.run(
-            f"conda run -n brainAge_pp_env python preprocessing.py {input_path}",
+            ["conda", "run", "-n", "brainAge_pp_env", "python", script_path, input_path],
             capture_output=True,
             text=True,
             check=True
         )
         msg = result.stdout.strip()
-        print("=====前處理執行狀況=====")
+        print("===== 前處理執行狀況 =====")
         print(msg)
-        print("=====前處理執行結束=====:")
-        
+        print("===== 前處理執行結束 =====")
     except subprocess.CalledProcessError as e:
         print("前處理執行失敗：", e.stderr)
         return None
@@ -25,7 +27,7 @@ def preprocessing(input_path):
     print("前處理結果檔案路徑:", processed_path)
     return processed_path
 
-def runModel(processed_path):
+def runBrainage(processed_path):
     """使用 env_runmodel 環境執行 runModel.py 並取得預測的腦齡"""
     try:
         result = subprocess.run(
