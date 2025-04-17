@@ -70,7 +70,7 @@ class Record(BaseModel):
     folder_path: str  # 存儲影像資料夾
     brain_age: Optional[int] = None
     actual_age: Optional[int] = None
-    MSSE_score: Optional[int] = None
+    MMSE_score: Optional[int] = None
     risk_score: Optional[str] = None
 
     @validator("date")

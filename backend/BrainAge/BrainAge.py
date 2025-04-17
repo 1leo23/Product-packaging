@@ -6,7 +6,7 @@ def runPreprocessing(input_path):
     """從 BrainAge.py 呼叫 BrainAge/preprocessing.py，並傳入影像路徑"""
     base_dir = os.path.dirname(os.path.abspath(__file__))  # 指向 backend/BrainAge/
     script_path = os.path.join(base_dir, "preprocessing.py")
-
+    print(script_path,input_path)
     try:
         result = subprocess.run(
             ["conda", "run", "-n", "brainAge_pp_env", "python", script_path, input_path],
@@ -19,19 +19,29 @@ def runPreprocessing(input_path):
         print(msg)
         print("===== 前處理執行結束 =====")
     except subprocess.CalledProcessError as e:
-        print("前處理執行失敗：", e.stderr)
+        print("❌ 前處理執行失敗！")
+        print("錯誤代碼：", e.returncode)
+        print("⚠️ STDOUT：")
+        print(e.stdout)
+        print("⚠️ STDERR：")
+        print(e.stderr)
         return None
 
     # 預期 processing.py 將前處理後的檔案路徑輸出到 stdout
     processed_path = result.stdout.strip().split('\n')[-1]
+    # 改用絕對路徑
+    processed_path = os.path.join(base_dir,processed_path)
     print("前處理結果檔案路徑:", processed_path)
     return processed_path
 
 def runBrainage(processed_path):
     """使用 env_runmodel 環境執行 runModel.py 並取得預測的腦齡"""
     try:
+        base_dir = os.path.dirname(os.path.abspath(__file__))  # 指向 backend/BrainAge/
+        script_path = os.path.join(base_dir, "runModel.py")
+        print(script_path,processed_path)
         result = subprocess.run(
-            ["conda", "run", "-n", "brainAge_runModel_env", "python", "runModel.py", processed_path],
+            ["conda", "run", "-n", "brainAge_runModel_env", "python",script_path, processed_path],
             capture_output=True,
             text=True,
             check=True
@@ -41,7 +51,10 @@ def runBrainage(processed_path):
         print(msg)
         print("=====腦齡預測執行結束=====:")
     except subprocess.CalledProcessError as e:
-        print("腦齡預測執行失敗：", e.stderr)
+        print("❌ 腦齡預測執行失敗！")
+        print("🔻 Return code:", e.returncode)
+        print("🔻 STDOUT:\n", e.stdout)
+        print("🔻 STDERR:\n", e.stderr)
         return None
 
     try:

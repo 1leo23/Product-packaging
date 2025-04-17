@@ -320,7 +320,7 @@ def upload_record(
     managerToken: str = Form(...),
     member_id: str = Form(...),
     date: str = Form(...),
-    MSSE_score: Optional[int] = Form(None),
+    MMSE_score: Optional[int] = Form(None),
     image_file: UploadFile = File(...)
 ):
     # === 驗證管理員 Token ===
@@ -359,6 +359,8 @@ def upload_record(
 
     # === 前處理 ===
     try:
+        base_dir = os.path.dirname(os.path.abspath(__file__))  
+        OG_image_path = os.path.join(base_dir,OG_image_path)  # 轉為絕對路徑
         preprocessing_path = runPreprocessing(OG_image_path)
         if not preprocessing_path:
             raise ValueError("前處理未回傳任何路徑")
@@ -384,7 +386,7 @@ def upload_record(
         member_id=member_id,
         record_id=record_id,
         date=date,
-        MSSE_score=MSSE_score,
+        MMSE_score=MMSE_score,
         folder_path=member_folder,
     )
     record.compute_actual_age(birthdate)
@@ -428,8 +430,10 @@ def ai_brain_age(
 
     record_data = result["RecordList"][0]
     folder_path = record_data["folder_path"]
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    folder_path =  os.path.join(base_dir,folder_path)
     actual_age = record_data["actual_age"]
-    MSSE_score = record_data.get("MSSE_score")
+    MMSE_score = record_data.get("MMSE_score")
     if os.path.exists(os.path.join(folder_path, "original.nii.gz")):
         OG_image_path = os.path.join(folder_path, "original.nii.gz")
     else:
@@ -450,9 +454,9 @@ def ai_brain_age(
     try:
         brain_age = runBrainage(PP_image_path)
 
-        if MSSE_score is not None:
+        if MMSE_score is not None:
             risk_score = runPreAD(
-                MSSE_score=MSSE_score,
+                MMSE_score=MMSE_score,
                 OG_image_path=OG_image_path,
                 actual_age=actual_age,
                 sex=sex
@@ -511,6 +515,9 @@ def ai_brain_age(
 
     record_data = result["RecordList"][0]
     folder_path = record_data["folder_path"]
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    folder_path =  os.path.join(base_dir,folder_path)
+
     if os.path.exists(os.path.join(folder_path, "original.nii.gz")):
         OG_image_path = os.path.join(folder_path, "original.nii.gz")
     else:
