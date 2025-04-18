@@ -90,7 +90,7 @@ def get_member_profile(member_id: str):
 
     return FileResponse(profile_path)
 
-@router.get("/slice/{member_id}/{record_count}/{plane}/{index}")
+@router.get("slice/{member_id}/{record_count}/{plane}/{index}")
 def get_slice_image(
     member_id: str,
     record_count: int,
