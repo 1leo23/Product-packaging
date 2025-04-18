@@ -434,10 +434,6 @@ def ai_brain_age(
     folder_path =  os.path.join(base_dir,folder_path)
     actual_age = record_data["actual_age"]
     MMSE_score = record_data.get("MMSE_score")
-<<<<<<< HEAD
-=======
-    print(record_data.get("MMSE_score"))
->>>>>>> 4e266181c9b3a874f2f2c9e935a1c4890fc1c3a9
     if os.path.exists(os.path.join(folder_path, "original.nii.gz")):
         OG_image_path = os.path.join(folder_path, "original.nii.gz")
     else:
@@ -455,21 +451,12 @@ def ai_brain_age(
         raise HTTPException(status_code=404, detail="找不到預處理檔案")
     # === 模型推論與風險分數 ===
     try:
-<<<<<<< HEAD
         brain_age = runBrainage(PP_image_path)
 
         if MMSE_score is not None:
             risk_score = runPreAD(
                 MMSE_score=MMSE_score,
                 OG_image_path=OG_image_path,
-=======
-        brain_age = 87 #runBrainage(PP_image_path)
-        
-        if MMSE_score is not None:
-            risk_score = runPreAD(
-                MMSE_score=MMSE_score,
-                original_image_path=OG_image_path,
->>>>>>> 4e266181c9b3a874f2f2c9e935a1c4890fc1c3a9
                 actual_age=actual_age,
                 sex=sex
             )
@@ -480,7 +467,7 @@ def ai_brain_age(
         raise HTTPException(
             status_code=500,
             detail=(
-                f"❌ runPreAD 執行失敗\n"
+                f"runPreAD 執行失敗\n"
                 f"錯誤訊息: {str(e)}\n"
                 f"參數資訊: MMSE={MMSE_score}, actual_age={actual_age}, sex={sex}, path={OG_image_path}"
             )
@@ -537,10 +524,10 @@ def ai_brain_age(
     base_dir = os.path.dirname(os.path.abspath(__file__))
     folder_path =  os.path.join(base_dir,folder_path)
 
-    if os.path.exists(os.path.join(folder_path, "original.nii.gz")):
-        OG_image_path = os.path.join(folder_path, "original.nii.gz")
+    if os.path.exists(os.path.join(folder_path, "preprocessing.nii.gz")):
+        OG_image_path = os.path.join(folder_path, "preprocessing.nii.gz")
     else:
-        raise HTTPException(status_code=404, detail="找不到原始MRI檔案")
+        raise HTTPException(status_code=404, detail="找不到前處理MRI檔案")
     
     try:
         folder_path = runSlice(OG_image_path,folder_path)
