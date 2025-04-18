@@ -65,7 +65,7 @@ os.makedirs(BRAIN_IMAGE_DIR, exist_ok=True)
 Path(STORAGE_ROOT).mkdir(parents=True, exist_ok=True)
 
 ### 取得醫生個人照 ###
-@router.get("/manager/profile/{manager_id}")
+@router.get("/manager/Profile/{manager_id}")
 def get_manager_profile(manager_id: str):
     manager = manager_collection.find_one({"id": manager_id})
     if not manager or "profile_image_path" not in manager:
@@ -78,7 +78,7 @@ def get_manager_profile(manager_id: str):
     return FileResponse(profile_path)
 
 ### 取得會員個人照 ###
-@router.get("/member/profile/{member_id}")
+@router.get("/member/Profile/{member_id}")
 def get_member_profile(member_id: str):
     member = member_collection.find_one({"id": member_id})
     if not member or "profile_image_path" not in member:
@@ -90,7 +90,7 @@ def get_member_profile(member_id: str):
 
     return FileResponse(profile_path)
 
-@router.get("slice/{member_id}/{record_count}/{plane}/{index}")
+@router.get("/ai/slice/{member_id}/{record_count}/{plane}/{index}")
 def get_slice_image(
     member_id: str,
     record_count: int,
@@ -315,7 +315,7 @@ def get_member_info(token: Union[MemberToken, ManagerToken], member_id: str):
 
 ### 上傳拍攝記錄 + 前處理 ###
 ## bottom：建立紀錄 ##
-@router.post("/upload/Record")
+@router.post("/ai/upload/Record")
 def upload_record(
     managerToken: str = Form(...),
     member_id: str = Form(...),
@@ -472,7 +472,6 @@ def ai_brain_age(
                 f"參數資訊: MMSE={MMSE_score}, actual_age={actual_age}, sex={sex}, path={OG_image_path}"
             )
         )
-    print(risk_score)
     # === 寫入預測結果 ===
     update_result = member_collection.update_one(
         {"id": member_id, "RecordList.record_id": record_id},
