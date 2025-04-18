@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:trajectory_app/const/constant.dart';
 import 'package:trajectory_app/models/manager_model.dart';
 import 'package:trajectory_app/models/member_model.dart';
+import 'package:trajectory_app/models/record_model.dart';
 import 'package:trajectory_app/services/auth_service.dart'; // 儲存中小型檔案之套件
 import 'dart:io'; // 用於 File 類型
 
@@ -104,7 +105,7 @@ class ApiService {
 
   // 新增方法：獲取會員列表
   static Future<List<MemberModel>> getMemberList() async {
-    final url = Uri.parse('$baseUrl/manager/MemberList'); // 假設的端點，請根據實際情況調整
+    final url = Uri.parse('$baseUrl/manager/MemberList');
     final token = await AuthService.getToken();
 
     try {
@@ -162,5 +163,166 @@ class ApiService {
       print("Exception fetching member image: $e");
     }
     return null;
+  }
+
+  // 上傳拍攝紀錄（含MRI檔案與表單欄位）
+  static Future<bool> uploadRecord({
+    required String memberId,
+    required String date, // 格式建議 YYYY-MM-DD
+    required File niiFile, // 本地 .nii.gz 檔案
+    int? mmseScore, // 可選
+  }) async {
+    final url = Uri.parse('$baseUrl/upload/Record');
+    final token = await AuthService.getToken();
+
+    if (token == null || token.isEmpty) {
+      print("❌ Manager Token 不存在，請重新登入");
+      return false;
+    }
+
+    final request = http.MultipartRequest('POST', url);
+
+    // === 表單欄位 ===
+    request.fields['managerToken'] = token;
+    request.fields['member_id'] = memberId;
+    request.fields['date'] = date;
+    if (mmseScore != null) {
+      request.fields['MMSE_score'] = mmseScore.toString();
+    }
+
+    // === MRI 檔案上傳 (.nii.gz) ===
+    final fileName = niiFile.path.split('/').last;
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'image_file',
+        niiFile.path,
+        filename: fileName,
+      ),
+    );
+
+    try {
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        print("✅ 上傳紀錄成功：$responseBody");
+        return true;
+      } else {
+        print("❌ 上傳失敗：${response.statusCode} - $responseBody");
+        return false;
+      }
+    } catch (e) {
+      print("❌ 上傳時發生例外：$e");
+      return false;
+    }
+  }
+
+  // AI計算
+  static Future<Map<String, dynamic>?> runAiPrediction({
+    required String memberId,
+    required int recordCount,
+  }) async {
+    final token = await AuthService.getToken();
+
+    if (token == null || token.isEmpty) {
+      print("❌ Manager Token 不存在，請重新登入");
+      return null;
+    }
+
+    final url = Uri.parse(
+      '$baseUrl/ai/$memberId',
+    ).replace(queryParameters: {'record_count': recordCount.toString()});
+
+    try {
+      final response = await http.post(
+        url,
+        body: {'manager_token': token},
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+      );
+
+      if (response.statusCode == 200) {
+        final utf8Body = utf8.decode(response.bodyBytes);
+        final Map<String, dynamic> data = jsonDecode(utf8Body);
+        print("✅ AI 預測成功：$data");
+        return data;
+      } else {
+        final utf8Body = utf8.decode(response.bodyBytes);
+        print("❌ AI 預測失敗：${response.statusCode} - $utf8Body");
+        return null;
+      }
+    } catch (e) {
+      print("❌ 發生例外：$e");
+      return null;
+    }
+  }
+
+  // 呼叫 2D 切片並儲存結果
+  static Future<bool> sliceAndStoreMRI({
+    required String memberId,
+    required int recordCount,
+  }) async {
+    final token = await AuthService.getToken();
+
+    if (token == null || token.isEmpty) {
+      print("❌ Manager Token 不存在，請重新登入");
+      return false;
+    }
+
+    final url = Uri.parse('$baseUrl/ai/restore/$memberId');
+
+    try {
+      final response = await http.post(
+        url,
+        body: {'record_count': recordCount.toString(), 'manager_token': token},
+      );
+
+      if (response.statusCode == 200) {
+        print("✅ MRI 切片與儲存完成");
+        return true;
+      } else {
+        final utf8Body = utf8.decode(response.bodyBytes);
+        print("❌ 切片失敗：${response.statusCode} - $utf8Body");
+        return false;
+      }
+    } catch (e) {
+      print("❌ 切片時發生例外：$e");
+      return false;
+    }
+  }
+
+  // 取得紀錄表
+  static Future<List<RecordModel>> getMemberRecordList(String memberId) async {
+    final token = await AuthService.getToken();
+
+    if (token == null || token.isEmpty) {
+      print("❌ Token 不存在，請重新登入");
+      return [];
+    }
+
+    final url = Uri.parse('$baseUrl/member/RecordsList?member_id=$memberId');
+
+    try {
+      final response = await http.post(
+        url,
+        body: jsonEncode({"token": token}),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      if (response.statusCode == 200) {
+        final utf8Body = utf8.decode(response.bodyBytes);
+        final List<dynamic> jsonList = jsonDecode(utf8Body);
+
+        return jsonList
+            .map((json) => RecordModel.fromJson(json as Map<String, dynamic>))
+            .toList();
+      } else {
+        final utf8Body = utf8.decode(response.bodyBytes);
+        print("❌ 成員紀錄列表取得失敗：${response.statusCode} - $utf8Body");
+        return [];
+      }
+    } catch (e) {
+      print("❌ 發生例外：$e");
+      return [];
+    }
   }
 }
