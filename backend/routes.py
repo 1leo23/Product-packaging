@@ -452,15 +452,17 @@ def ai_brain_age(
     # === 模型推論與風險分數 ===
     try:
         brain_age = runBrainage(PP_image_path)
-
+        print(f"腦齡:{brain_age}")
         if MMSE_score is not None:
+            print(f"有跑失智症模型")
             risk_score = runPreAD(
                 MMSE_score=MMSE_score,
-                OG_image_path=OG_image_path,
+                original_image_path=OG_image_path,
                 actual_age=actual_age,
                 sex=sex
             )
         else:
+            print(f"沒跑失智症模型")
             risk_score = None
 
     except Exception as e:

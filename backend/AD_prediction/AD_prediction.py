@@ -7,7 +7,7 @@ def runModel(original_image_path, MMSE_score, actual_age, sex):
     try:
         result = subprocess.run(
             # 環境參數要改
-            ["conda", "run", "-n", "brainAge_runModel_env", "python", script_path, original_image_path, str(MMSE_score), str(actual_age), sex],
+            ["conda", "run", "-n", "ADprediction_env", "python", script_path, original_image_path, str(MMSE_score), str(actual_age), sex],
             capture_output=True,
             text=True,
             check=True

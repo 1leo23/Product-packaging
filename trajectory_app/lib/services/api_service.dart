@@ -134,7 +134,7 @@ class ApiService {
 
   // 獲取管理者圖片 URL
   static Future<String?> getManagerImage(String managerId) async {
-    final url = Uri.parse('$baseUrl/manager/profile/$managerId');
+    final url = Uri.parse('$baseUrl/manager/Profile/$managerId');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -151,7 +151,7 @@ class ApiService {
 
   // 獲取會員圖片 URL
   static Future<String?> getMemberImage(String memberId) async {
-    final url = Uri.parse('$baseUrl/member/profile/$memberId');
+    final url = Uri.parse('$baseUrl/member/Profile/$memberId');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -172,7 +172,7 @@ class ApiService {
     required File niiFile, // 本地 .nii.gz 檔案
     int? mmseScore, // 可選
   }) async {
-    final url = Uri.parse('$baseUrl/upload/Record');
+    final url = Uri.parse('$baseUrl/ai/upload/Record');
     final token = await AuthService.getToken();
 
     if (token == null || token.isEmpty) {
