@@ -144,7 +144,7 @@ if __name__ == "__main__":
         
         corrected_image = n4(original_image_path)
         #145行是n4，裡面放的original_image_path是影像路徑
-        warped_image = reg(corrected_image,fixed_path )
+        warped_image = reg(corrected_image, fixed_path)
         #147行是配準，注意corrected_image放的是張量而非路徑，fixed_path是腦的模板
         masked = skull(warped_image)
         #149行是去顱骨，注意warped_image放的是張量而非路徑

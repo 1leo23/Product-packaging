@@ -34,7 +34,8 @@ class MemberModel {
       yyyy: yyyy,
       mm: mm,
       dd: dd,
-      numRecords: json['numRecords'] as String? ?? '--',
+      numRecords:
+          json['record_count'] != null ? json['record_count'].toString() : '--',
     );
   }
 }

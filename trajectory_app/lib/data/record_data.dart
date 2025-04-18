@@ -8,6 +8,8 @@ class RecordData {
       dd: "28",
       actualAge: "62",
       brainAge: "71",
+      mmseScore: "",
+      riskScore: "",
     ),
     RecordModel(
       yyyy: "2018",
@@ -15,6 +17,8 @@ class RecordData {
       dd: "21",
       actualAge: "58",
       brainAge: "59",
+      mmseScore: "",
+      riskScore: "",
     ),
     RecordModel(
       yyyy: "2015",
@@ -22,6 +26,8 @@ class RecordData {
       dd: "08",
       actualAge: "55",
       brainAge: "56",
+      mmseScore: "",
+      riskScore: "",
     ),
     RecordModel(
       yyyy: "2010",
@@ -29,6 +35,8 @@ class RecordData {
       dd: "12",
       actualAge: "50",
       brainAge: "50",
+      mmseScore: "",
+      riskScore: "",
     ),
   ];
 }

@@ -6,9 +6,6 @@ import xgboost as xgb
 import sys
 
 def RiskScore(original_image_path, MMSE_score, actual_age, sex):
-    original_image_path = original_image_path
-
-    sex = sex
     gender = {"F": "Female", "M": "Male"}.get(sex.upper(), "Female")
     actual_age = float(actual_age)
     MMSE_score = float(MMSE_score)
