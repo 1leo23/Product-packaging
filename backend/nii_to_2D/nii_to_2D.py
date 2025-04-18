@@ -1,5 +1,4 @@
 import os 
-import sys
 import subprocess
 
 def runModel(input_path, output_dir):

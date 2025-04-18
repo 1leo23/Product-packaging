@@ -320,7 +320,7 @@ def upload_record(
     managerToken: str = Form(...),
     member_id: str = Form(...),
     date: str = Form(...),
-    MSSE_score: Optional[int] = Form(None),
+    MMSE_score: Optional[int] = Form(None),
     image_file: UploadFile = File(...)
 ):
     # === 驗證管理員 Token ===
@@ -384,7 +384,7 @@ def upload_record(
         member_id=member_id,
         record_id=record_id,
         date=date,
-        MSSE_score=MSSE_score,
+        MMSE_score=MMSE_score,
         folder_path=member_folder,
     )
     record.compute_actual_age(birthdate)
@@ -429,7 +429,7 @@ def ai_brain_age(
     record_data = result["RecordList"][0]
     folder_path = record_data["folder_path"]
     actual_age = record_data["actual_age"]
-    MSSE_score = record_data.get("MSSE_score")
+    MMSE_score = record_data.get("MMSE_score")
     if os.path.exists(os.path.join(folder_path, "original.nii.gz")):
         OG_image_path = os.path.join(folder_path, "original.nii.gz")
     else:
@@ -450,9 +450,9 @@ def ai_brain_age(
     try:
         brain_age = runBrainage(PP_image_path)
 
-        if MSSE_score is not None:
+        if MMSE_score is not None:
             risk_score = runPreAD(
-                MSSE_score=MSSE_score,
+                MMSE_score=MMSE_score,
                 OG_image_path=OG_image_path,
                 actual_age=actual_age,
                 sex=sex
@@ -517,7 +517,8 @@ def ai_brain_age(
         raise HTTPException(status_code=404, detail="找不到原始MRI檔案")
     
     try:
-        runSlice(OG_image_path,folder_path)
+        folder_path = runSlice(OG_image_path,folder_path)
+        return {"outputDirection" : folder_path}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"切片失敗: {str(e)}")
 

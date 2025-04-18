@@ -68,7 +68,7 @@ def brain_age_calc(original_image_path):
     
     # 第一步：執行前處理
     print("執行前處理...")
-    preprocessed_path = preprocessing(input_path)
+    preprocessed_path = runPreprocessing(input_path)
     if preprocessed_path is None or not os.path.exists(preprocessed_path):
         print("前處理失敗，程式終止")
         sys.exit(1)
@@ -76,7 +76,7 @@ def brain_age_calc(original_image_path):
 
     # 第二步：執行腦齡預測
     print("執行腦齡預測...")
-    brain_age = runModel(preprocessed_path)
+    brain_age = runBrainage(preprocessed_path)
     if brain_age is None:
         print("腦齡預測失敗，程式終止")
         sys.exit(1)
