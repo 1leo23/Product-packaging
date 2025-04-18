@@ -359,6 +359,8 @@ def upload_record(
 
     # === 前處理 ===
     try:
+        base_dir = os.path.dirname(os.path.abspath(__file__))  
+        OG_image_path = os.path.join(base_dir,OG_image_path)  # 轉為絕對路徑
         preprocessing_path = runPreprocessing(OG_image_path)
         if not preprocessing_path:
             raise ValueError("前處理未回傳任何路徑")
@@ -428,8 +430,14 @@ def ai_brain_age(
 
     record_data = result["RecordList"][0]
     folder_path = record_data["folder_path"]
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    folder_path =  os.path.join(base_dir,folder_path)
     actual_age = record_data["actual_age"]
     MMSE_score = record_data.get("MMSE_score")
+<<<<<<< HEAD
+=======
+    print(record_data.get("MMSE_score"))
+>>>>>>> 4e266181c9b3a874f2f2c9e935a1c4890fc1c3a9
     if os.path.exists(os.path.join(folder_path, "original.nii.gz")):
         OG_image_path = os.path.join(folder_path, "original.nii.gz")
     else:
@@ -445,15 +453,23 @@ def ai_brain_age(
         PP_image_path = os.path.join(folder_path, "preprocessing.nii.gz")
     else:
         raise HTTPException(status_code=404, detail="找不到預處理檔案")
-
     # === 模型推論與風險分數 ===
     try:
+<<<<<<< HEAD
         brain_age = runBrainage(PP_image_path)
 
         if MMSE_score is not None:
             risk_score = runPreAD(
                 MMSE_score=MMSE_score,
                 OG_image_path=OG_image_path,
+=======
+        brain_age = 87 #runBrainage(PP_image_path)
+        
+        if MMSE_score is not None:
+            risk_score = runPreAD(
+                MMSE_score=MMSE_score,
+                original_image_path=OG_image_path,
+>>>>>>> 4e266181c9b3a874f2f2c9e935a1c4890fc1c3a9
                 actual_age=actual_age,
                 sex=sex
             )
@@ -461,8 +477,15 @@ def ai_brain_age(
             risk_score = None
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"模型推論失敗: {str(e)}")
-
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f"❌ runPreAD 執行失敗\n"
+                f"錯誤訊息: {str(e)}\n"
+                f"參數資訊: MMSE={MMSE_score}, actual_age={actual_age}, sex={sex}, path={OG_image_path}"
+            )
+        )
+    print(risk_score)
     # === 寫入預測結果 ===
     update_result = member_collection.update_one(
         {"id": member_id, "RecordList.record_id": record_id},
@@ -511,6 +534,9 @@ def ai_brain_age(
 
     record_data = result["RecordList"][0]
     folder_path = record_data["folder_path"]
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    folder_path =  os.path.join(base_dir,folder_path)
+
     if os.path.exists(os.path.join(folder_path, "original.nii.gz")):
         OG_image_path = os.path.join(folder_path, "original.nii.gz")
     else:

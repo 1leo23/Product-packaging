@@ -87,7 +87,8 @@ class SFCN(nn.Module):
 def runModel(path):
     # 載入五個模型
     cnns = [None] * 5
-    model_dir = 'models'
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    model_dir = os.path.join(base_dir,'models')
     pt_files = os.listdir(model_dir)
     if len(pt_files) < 5:
         print("模型數量不足，請確認 models 資料夾內有至少五個模型檔")

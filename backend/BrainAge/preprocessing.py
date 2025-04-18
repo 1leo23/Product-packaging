@@ -66,7 +66,10 @@ def preprocessing(nii_file_path):
     try:
         print("開始前處理:", nii_file_path)
         # 讀取 MNI 模板
-        template_image = sitk.ReadImage('mni152-s.nii', sitk.sitkFloat32)
+        # 取得目前這支腳本的所在資料夾
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        abs_mni_path = os.path.join(base_dir, 'mni152-s.nii')
+        template_image = sitk.ReadImage(abs_mni_path, sitk.sitkFloat32)
         print("MNI 模板讀檔成功")
         
         # 讀取輸入檔案
@@ -91,12 +94,13 @@ def preprocessing(nii_file_path):
         
         # 儲存結果
         filename = os.path.basename(nii_file_path)
-        output_dir = 'ppResult'
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, filename)
-        ants.image_write(img_uint8, output_path)
+        output_path = 'ppResult'
+        abs_output_dir = os.path.join(base_dir,output_path) 
+        os.makedirs(abs_output_dir, exist_ok=True)
+        abs_output_dir = os.path.join(abs_output_dir, filename)
+        ants.image_write(img_uint8, abs_output_dir)
         print("存檔成功")
-        return os.path.abspath(output_path)
+        return abs_output_dir
     except Exception as e:
         print("前處理失敗:", e)
         sys.exit(1)

@@ -5,20 +5,21 @@ import os
 import xgboost as xgb
 import sys
 
-def RiskScore(folder_path, original_image_path, MMSE_score, actual_age, sex):
-    folder_path = folder_path
+def RiskScore(original_image_path, MMSE_score, actual_age, sex):
     original_image_path = original_image_path
 
     sex = sex
     gender = {"F": "Female", "M": "Male"}.get(sex.upper(), "Female")
-    actual_age = actual_age
-    MMSE_score = MMSE_score
+    actual_age = float(actual_age)
+    MMSE_score = float(MMSE_score)
     gender_num = {"Female": 0, "Male": 1}[gender]
     patient_info = np.array([gender_num, actual_age, MMSE_score], dtype=np.float32)
 
-    fixed_path = r"AD_Risk\mni_icbm152_t1_tal_nlin_sym_09a.nii"
-    model_path = r"AD_Risk\DenseNet121_15epochs_accuracy0.83378_val0.58201.pth"
-    xgb_path = r"AD_Risk\xgboost_model.json"
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+
+    fixed_path = os.path.join(base_dir, r"AD_Risk\mni_icbm152_t1_tal_nlin_sym_09a.nii")
+    model_path = os.path.join(base_dir, r"AD_Risk\DenseNet121_15epochs_accuracy0.83378_val0.58201.pth")
+    xgb_path = os.path.join(base_dir, r"AD_Risk\xgboost_model.json")
 
     img = n4(original_image_path)
     img = reg(img, fixed_path)
@@ -38,11 +39,10 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("請提供要預測的 nii.gz 檔案路徑")
         sys.exit(1)
-    folder_path = sys.argv[1]
-    original_image_path = sys.argv[2]
-    MMSE_score = sys.argv[3]
-    actual_age = sys.argv[4]
-    sex = sys.argv[5]
-    AD_prediction = RiskScore(folder_path, original_image_path, MMSE_score, actual_age, sex)
+    original_image_path = sys.argv[1]
+    MMSE_score = sys.argv[2]
+    actual_age = sys.argv[3]
+    sex = sys.argv[4]
+    AD_prediction = RiskScore(original_image_path, MMSE_score, actual_age, sex)
     # 將預測結果輸出到標準輸出，方便其他程式捕捉
     print(AD_prediction)

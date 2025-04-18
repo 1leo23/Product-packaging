@@ -4,7 +4,6 @@ import os
 import SimpleITK as sitk
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
-from tqdm import tqdm
 from monai.networks.nets import DenseNet121, DenseNet169, DenseNet201, DenseNet264
 import os.path as osp
 import torch.nn as nn
