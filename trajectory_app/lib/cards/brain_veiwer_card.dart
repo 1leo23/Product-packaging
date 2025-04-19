@@ -1,16 +1,24 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:trajectory_app/cards/custom_card.dart';
 import 'package:trajectory_app/models/record_model.dart';
+import 'package:trajectory_app/services/api_service.dart';
 
 class BrainViewerCard extends StatefulWidget {
+  final String memberId;
   final RecordModel record;
   final int recordIndex;
   final void Function(int) popBrainViewer;
+
   const BrainViewerCard({
     super.key,
     required this.record,
     required this.recordIndex,
     required this.popBrainViewer,
+    required this.memberId,
   });
 
   @override
@@ -18,74 +26,157 @@ class BrainViewerCard extends StatefulWidget {
 }
 
 class _BrainViewerCardState extends State<BrainViewerCard> {
-  // 初始切片數
-  int axialSlice = 64;
-  int coronalSlice = 96;
-  int sagittalSlice = 64;
+  Map<String, List<File>>? imageSet;
+  final Map<String, int> sliceIndex = {'axial': 0, 'coronal': 0, 'sagittal': 0};
+  final Map<String, int> sliceMax = {'axial': 0, 'coronal': 0, 'sagittal': 0};
 
-  // 建立切片控制元件
-  Widget _buildSliceControl(
-    String label,
-    int value,
-    ValueChanged<String> onChanged,
-    VoidCallback onDecrease,
-    VoidCallback onIncrease,
-  ) {
+  Timer? _longPressTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSlices();
+  }
+
+  Future<void> _loadSlices() async {
+    try {
+      final result = await ApiService.fetchAndUnzipSlices(
+        widget.memberId,
+        widget.recordIndex,
+      );
+
+      // 預先載入所有圖片
+      for (final plane in ['axial', 'coronal', 'sagittal']) {
+        final imageList = result[plane] ?? [];
+        for (final file in imageList) {
+          await precacheImage(FileImage(file), context);
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        imageSet = result;
+        for (var plane in ['axial', 'coronal', 'sagittal']) {
+          sliceMax[plane] = result[plane]?.length ?? 0;
+          sliceIndex[plane] = (sliceMax[plane]! / 2).toInt();
+        }
+      });
+    } catch (e) {
+      print("❌ 載入切片失敗：$e");
+    }
+  }
+
+  void _startLongPressTimer(String label, bool isIncrement) {
+    _longPressTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      setState(() {
+        final value = sliceIndex[label]!;
+        final max = sliceMax[label]!;
+        if (isIncrement && value < max - 1) {
+          sliceIndex[label] = value + 1;
+        } else if (!isIncrement && value > 0) {
+          sliceIndex[label] = value - 1;
+        }
+      });
+    });
+  }
+
+  void _stopLongPressTimer() {
+    _longPressTimer?.cancel();
+    _longPressTimer = null;
+  }
+
+  Widget _buildSliceControl(String label) {
+    final value = sliceIndex[label]!;
+    final max = sliceMax[label]!;
+
     return Column(
       children: [
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
-        SizedBox(height: 8),
-        Container(
-          width: 230,
-          height: 230,
-          decoration: BoxDecoration(
-            color: Colors.black,
-            image: DecorationImage(
-              image: AssetImage('assets/mri_placeholder.png'),
-              fit: BoxFit.cover,
+        const SizedBox(height: 8),
+        Listener(
+          onPointerSignal: (pointerSignal) {
+            if (pointerSignal is PointerScrollEvent && imageSet != null) {
+              setState(() {
+                if (pointerSignal.scrollDelta.dy < 0 && value > 0) {
+                  // 滾輪往上：減少切片
+                  sliceIndex[label] = value - 1;
+                } else if (pointerSignal.scrollDelta.dy > 0 &&
+                    value < max - 1) {
+                  // 滾輪往下：增加切片
+                  sliceIndex[label] = value + 1;
+                }
+              });
+            }
+          },
+
+          child: Container(
+            width: 230,
+            height: 230,
+            decoration: BoxDecoration(
+              color: Colors.black,
+              image:
+                  (imageSet != null &&
+                          imageSet![label]!.isNotEmpty &&
+                          value < max)
+                      ? DecorationImage(
+                        image: FileImage(imageSet![label]![value]),
+                        fit: BoxFit.cover,
+                      )
+                      : null,
             ),
+            child:
+                (imageSet == null)
+                    ? const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    )
+                    : null,
           ),
         ),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            IconButton(
-              onPressed: onDecrease,
-              icon: Icon(Icons.remove, color: Colors.white),
-              style: IconButton.styleFrom(backgroundColor: Colors.grey[800]),
-            ),
-            SizedBox(width: 8),
-            SizedBox(
-              width: 60,
-              child: TextField(
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18, color: Colors.white),
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: Colors.grey[900],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-                onChanged: onChanged,
-                controller: TextEditingController(text: value.toString()),
+            GestureDetector(
+              onLongPressStart: (_) => _startLongPressTimer(label, false),
+              onLongPressEnd: (_) => _stopLongPressTimer(),
+              child: IconButton(
+                onPressed:
+                    () => setState(() {
+                      if (value > 0) sliceIndex[label] = value - 1;
+                    }),
+                icon: const Icon(Icons.remove, color: Colors.white),
+                style: IconButton.styleFrom(backgroundColor: Colors.grey[800]),
               ),
             ),
-            SizedBox(width: 8),
-            IconButton(
-              onPressed: onIncrease,
-              icon: Icon(Icons.add, color: Colors.white),
-              style: IconButton.styleFrom(backgroundColor: Colors.grey[800]),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 60,
+              child: Center(
+                child: Text(
+                  value.toString(),
+                  style: const TextStyle(fontSize: 18, color: Colors.white),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onLongPressStart: (_) => _startLongPressTimer(label, true),
+              onLongPressEnd: (_) => _stopLongPressTimer(),
+              child: IconButton(
+                onPressed:
+                    () => setState(() {
+                      if (value < max - 1) sliceIndex[label] = value + 1;
+                    }),
+                icon: const Icon(Icons.add, color: Colors.white),
+                style: IconButton.styleFrom(backgroundColor: Colors.grey[800]),
+              ),
             ),
           ],
         ),
@@ -94,103 +185,49 @@ class _BrainViewerCardState extends State<BrainViewerCard> {
   }
 
   @override
+  void dispose() {
+    _stopLongPressTimer();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return CustomCard(
-      padding: EdgeInsets.all(20),
+      padding: const EdgeInsets.all(20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 標題區域
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              SizedBox(width: 40),
+              const SizedBox(width: 40),
               Column(
                 children: [
                   Text(
                     "${widget.record.yyyy}年${widget.record.mm}月${widget.record.dd}日",
-                    style: TextStyle(fontSize: 16, color: Colors.white),
+                    style: const TextStyle(fontSize: 16, color: Colors.white),
                   ),
                   Text(
                     "實際年齡 / 腦部年齡：${widget.record.actualAge} / ${widget.record.brainAge} 歲",
-                    style: TextStyle(fontSize: 14, color: Colors.white),
+                    style: const TextStyle(fontSize: 14, color: Colors.white),
                   ),
                 ],
               ),
               IconButton(
-                onPressed: () {
-                  widget.popBrainViewer(widget.recordIndex);
-                },
-                icon: Icon(Icons.close, color: Colors.white, size: 24),
+                onPressed: () => widget.popBrainViewer(widget.recordIndex),
+                icon: const Icon(Icons.close, color: Colors.white, size: 24),
               ),
             ],
           ),
-          SizedBox(height: 16),
-
-          // MRI 影像顯示區域
+          const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildSliceControl(
-                "Axial",
-                axialSlice,
-                (value) {
-                  setState(() {
-                    axialSlice = int.tryParse(value) ?? axialSlice;
-                  });
-                },
-                () {
-                  setState(() {
-                    if (axialSlice > 0) axialSlice--;
-                  });
-                },
-                () {
-                  setState(() {
-                    axialSlice++;
-                  });
-                },
-              ),
-              _buildSliceControl(
-                "Coronal",
-                coronalSlice,
-                (value) {
-                  setState(() {
-                    coronalSlice = int.tryParse(value) ?? coronalSlice;
-                  });
-                },
-                () {
-                  setState(() {
-                    if (coronalSlice > 0) coronalSlice--;
-                  });
-                },
-                () {
-                  setState(() {
-                    coronalSlice++;
-                  });
-                },
-              ),
-              _buildSliceControl(
-                "Sagittal",
-                sagittalSlice,
-                (value) {
-                  setState(() {
-                    sagittalSlice = int.tryParse(value) ?? sagittalSlice;
-                  });
-                },
-                () {
-                  setState(() {
-                    if (sagittalSlice > 0) sagittalSlice--;
-                  });
-                },
-                () {
-                  setState(() {
-                    sagittalSlice++;
-                  });
-                },
-              ),
+              _buildSliceControl("axial"),
+              _buildSliceControl("coronal"),
+              _buildSliceControl("sagittal"),
             ],
           ),
-          //SizedBox(height: 16),
         ],
       ),
     );

@@ -22,7 +22,6 @@ class RecordModel {
     String mm = '--';
     String dd = '--';
 
-    // 處理 date（格式如 "20150630"）
     if (json['date'] != null && json['date'].length == 8) {
       final dateStr = json['date'];
       yyyy = dateStr.substring(0, 4);
@@ -37,7 +36,10 @@ class RecordModel {
       brainAge: json['brain_age']?.toString() ?? '--',
       actualAge: json['actual_age']?.toString() ?? '--',
       mmseScore: json['MMSE_score']?.toString() ?? '--',
-      riskScore: json['risk_score']?.toString() ?? '--',
+      riskScore:
+          (json['risk_score']?.toString().isEmpty ?? true)
+              ? '--'
+              : json['risk_score'].toString(),
     );
   }
 }

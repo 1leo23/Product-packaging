@@ -17,6 +17,7 @@ class MemberScreen extends StatefulWidget {
 
 class _MemberScreenState extends State<MemberScreen> {
   int _selectedIndex = 0;
+  late final List<Widget> mainWidgetList;
   ProfileWidget profileWidget = const ProfileWidget(
     type: 'member',
     usingLocalImage: false,
@@ -47,9 +48,12 @@ class _MemberScreenState extends State<MemberScreen> {
   void initState() {
     super.initState();
     loadMemberInfo(); // 在 initState() 內執行，只執行一次
+    mainWidgetList = <Widget>[
+      const ReportsWidget(),
+      RecordsWidget(memberId: widget.memberId),
+    ];
   }
 
-  final mainWidgetList = <Widget>[const ReportsWidget(), const RecordsWidget()];
   @override
   Widget build(BuildContext context) {
     return Scaffold(

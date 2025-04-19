@@ -14,6 +14,9 @@ import os
 import jwt
 import datetime
 import shutil
+from typing import Dict, List
+import base64
+from starlette.responses import JSONResponse
 
 # 載入 .env 環境變數
 load_dotenv()
@@ -48,35 +51,36 @@ for path in [MANAGER_PROFILE_DIR, MEMBER_PROFILE_DIR, BRAIN_IMAGE_DIR]:
     os.makedirs(path, exist_ok=True)
 Path(STORAGE_ROOT).mkdir(parents=True, exist_ok=True)
 
-### 取得Slice切片 ###
-@router.get("/ai/slice/{member_id}/{record_count}/{plane}/{index}")
-def get_slice_image(
-    member_id: str,
-    record_count: int,
-    plane: str,
-    index: int
-):
+@router.get("/ai/slice/all/{member_id}/{record_count}")
+def get_all_slice_images_base64(member_id: str, record_count: int) -> Dict[str, List[str]]:
     record_id = f"record{str(record_count).zfill(3)}"
     result = member_collection.find_one(
         {"id": member_id},
         {"_id": 0, "RecordList": {"$elemMatch": {"record_id": record_id}}}
     )
+
     if not result or "RecordList" not in result or len(result["RecordList"]) == 0:
         raise HTTPException(status_code=404, detail="找不到指定的紀錄")
 
     record = result["RecordList"][0]
     folder_path = record["folder_path"]
 
-    plane = plane.lower()
-    if plane not in {"sagittal", "coronal", "axial"}:
-        raise HTTPException(status_code=400, detail="plane 參數錯誤，請使用 sagittal、coronal 或 axial")
-    png_filename = f"{index:03d}.png"
-    png_path = os.path.join(folder_path, plane, png_filename)
+    if not os.path.exists(folder_path):
+        raise HTTPException(status_code=404, detail="找不到紀錄的資料夾")
 
-    if not os.path.exists(png_path):
-        raise HTTPException(status_code=404, detail="找不到指定的切片圖檔")
+    slices = {'axial': [], 'coronal': [], 'sagittal': []}
 
-    return FileResponse(png_path, media_type="image/png")
+    for root, _, files in os.walk(folder_path):
+        for file in sorted(files):
+            if file.endswith(".png"):
+                plane = os.path.basename(root).lower()
+                if plane in slices:
+                    file_path = os.path.join(root, file)
+                    with open(file_path, "rb") as f:
+                        b64 = base64.b64encode(f.read()).decode('utf-8')
+                        slices[plane].append(b64)
+
+    return JSONResponse(content=slices)
 
 ### 上傳拍攝記錄 + 前處理 ###
 ## bottom：建立紀錄 ##
@@ -155,7 +159,8 @@ def ai_brain_age(
     if not result or "RecordList" not in result or len(result["RecordList"]) == 0:
         raise HTTPException(status_code=404, detail="找不到指定的紀錄")
     record_data = result["RecordList"][0]
-    folder_path = os.path.join(os.path.dirname(__file__), record_data["folder_path"])
+    base_dir = os.path.dirname(os.path.dirname(__file__))
+    folder_path = os.path.join(base_dir, record_data["folder_path"])
     actual_age = record_data["actual_age"]
     MMSE_score = record_data.get("MMSE_score")
     
@@ -209,11 +214,12 @@ def ai_brain_age(
         raise HTTPException(status_code=404, detail="找不到指定的紀錄")
 
     record_data = result["RecordList"][0]
-    folder_path = os.path.join(os.path.dirname(__file__), record_data["folder_path"])
+    base_dir = os.path.dirname(os.path.dirname(__file__))
+    folder_path = os.path.join(base_dir, record_data["folder_path"])
     PP_image_path = os.path.join(folder_path, "preprocessing.nii.gz")
 
     if not os.path.exists(PP_image_path):
-        raise HTTPException(status_code=404, detail="找不到前處理 MRI 檔案")
+        raise HTTPException(status_code=404, detail=f"找不到前處理 MRI 檔案!!{PP_image_path}")
 
     try:
         output_dir = runSlice(PP_image_path, folder_path)

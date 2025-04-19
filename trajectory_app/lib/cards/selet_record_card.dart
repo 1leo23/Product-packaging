@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:trajectory_app/cards/custom_card.dart';
 import 'package:trajectory_app/const/constant.dart';
-import 'package:trajectory_app/data/record_data.dart';
 import 'package:trajectory_app/models/record_model.dart';
 
 class SelectRecordCard extends StatefulWidget {
   final void Function(int) buildBrainViewer;
-  final RecordData data;
+  final List<RecordModel>? data;
 
   const SelectRecordCard({
     super.key,
@@ -29,7 +28,7 @@ class _SelectRecordCardState extends State<SelectRecordCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               '選擇紀錄',
               style: TextStyle(
                 fontSize: 20,
@@ -37,26 +36,32 @@ class _SelectRecordCardState extends State<SelectRecordCard> {
                 color: Colors.white,
               ),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 3,
-                ),
-                itemCount: widget.data.recordList.length,
-                itemBuilder: (context, index) {
-                  final record = widget.data.recordList[index];
-                  return _buildRecordCard(record, index);
-                },
-              ),
+              child:
+                  widget.data == null
+                      ? const Center(
+                        child: CircularProgressIndicator(),
+                      ) // 🔄 載入圈圈
+                      : GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 10,
+                              childAspectRatio: 1.8,
+                            ),
+                        itemCount: widget.data!.length,
+                        itemBuilder: (context, index) {
+                          final record = widget.data![index];
+                          return _buildRecordCard(record, index);
+                        },
+                      ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             _selectionButton(),
           ],
         ),
@@ -83,12 +88,22 @@ class _SelectRecordCardState extends State<SelectRecordCard> {
             children: [
               Text(
                 "${record.yyyy}年${record.mm}月${record.dd}日",
-                style: TextStyle(color: Colors.white, fontSize: 14),
+                style: const TextStyle(color: Colors.white, fontSize: 14),
               ),
-              SizedBox(height: 5),
+              const SizedBox(height: 5),
+              Text(
+                '認知測驗分數 : ${record.mmseScore != 0 ? record.mmseScore : '--'}',
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+              ),
+              const SizedBox(height: 5),
               Text(
                 '實際年齡 / 腦部年齡 : ${record.actualAge} / ${record.brainAge}歲',
-                style: TextStyle(color: Colors.white, fontSize: 12),
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                '失智症評估 : ${record.riskScore}',
+                style: const TextStyle(color: Colors.white, fontSize: 12),
               ),
             ],
           ),
@@ -113,7 +128,7 @@ class _SelectRecordCardState extends State<SelectRecordCard> {
               borderRadius: BorderRadius.circular(8),
             ),
           ),
-          child: Text(
+          child: const Text(
             '選擇',
             style: TextStyle(fontSize: 18, color: Colors.white),
           ),

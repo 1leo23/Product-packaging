@@ -122,7 +122,7 @@ def runModel(path):
             outputs = cnns[model_i](inputs)
         ensemble_output += outputs.item() * 0.2
 
-    brainAge = ensemble_output
+    brainAge  = np.round(ensemble_output, 1)
     print(f"腦齡：{brainAge}")
     return brainAge
 

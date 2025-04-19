@@ -432,10 +432,7 @@ class _UploadFormCardState extends State<UploadFormCard> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(color: Colors.white70, fontSize: 16),
-          ),
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 16)),
           SizedBox(
             height: 40,
             width: 250,
@@ -457,7 +454,7 @@ class _UploadFormCardState extends State<UploadFormCard> {
                       }
                       : null,
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.white),
+                side: const BorderSide(color: Colors.white70),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8.0),
                 ),
