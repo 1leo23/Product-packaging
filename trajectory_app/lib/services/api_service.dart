@@ -5,6 +5,8 @@ import 'package:trajectory_app/models/manager_model.dart';
 import 'package:trajectory_app/models/member_model.dart';
 import 'package:trajectory_app/models/record_model.dart';
 import 'package:trajectory_app/services/auth_service.dart'; // 儲存中小型檔案之套件
+import 'package:archive/archive.dart';
+import 'package:path_provider/path_provider.dart';
 import 'dart:io'; // 用於 File 類型
 
 class ApiService {
@@ -268,7 +270,9 @@ class ApiService {
       return false;
     }
 
-    final url = Uri.parse('$baseUrl/ai/restore/$memberId');
+    final url = Uri.parse(
+      '$baseUrl/ai/restore/$memberId?record_count=$recordCount',
+    );
 
     try {
       final response = await http.post(
@@ -324,5 +328,51 @@ class ApiService {
       print("❌ 發生例外：$e");
       return [];
     }
+  }
+
+  static Future<Map<String, List<File>>> fetchAndUnzipSlices(
+    String memberId,
+    int recordCount,
+  ) async {
+    final url = Uri.parse('$baseUrl/ai/slice/all/$memberId/$recordCount');
+    final response = await http.get(url);
+
+    if (response.statusCode != 200) {
+      throw Exception('下載失敗: ${response.statusCode}');
+    }
+
+    // 解析 JSON 結構
+    final Map<String, dynamic> jsonData = jsonDecode(
+      utf8.decode(response.bodyBytes),
+    );
+
+    final axial = <File>[];
+    final coronal = <File>[];
+    final sagittal = <File>[];
+
+    final tempDir = await getTemporaryDirectory();
+
+    // 工具函數：處理每一切面
+    Future<void> saveImages(
+      String plane,
+      List<dynamic> base64List,
+      List<File> outputList,
+    ) async {
+      for (int i = 0; i < base64List.length; i++) {
+        final b64 = base64List[i];
+        final bytes = base64Decode(b64);
+        final path = '${tempDir.path}/${plane}_$i.png';
+        final file = File(path);
+        await file.writeAsBytes(bytes);
+        outputList.add(file);
+      }
+    }
+
+    // 根據每一個切面解碼 & 儲存
+    await saveImages('axial', jsonData['axial'] ?? [], axial);
+    await saveImages('coronal', jsonData['coronal'] ?? [], coronal);
+    await saveImages('sagittal', jsonData['sagittal'] ?? [], sagittal);
+
+    return {'axial': axial, 'coronal': coronal, 'sagittal': sagittal};
   }
 }
