@@ -25,6 +25,7 @@ class _UploadFormCardState extends State<UploadFormCard> {
   final _riskScoreController = TextEditingController();
   File? _selectedFile;
   bool _isProcessing = false;
+  bool _autoProceed = false;
 
   void dispose() {
     _idController.dispose();
@@ -136,6 +137,10 @@ class _UploadFormCardState extends State<UploadFormCard> {
             backgroundColor: Colors.green,
           ),
         );
+        // 🔹 自動執行下一步
+        if (_autoProceed) {
+          await _handleAiPrediction();
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -193,7 +198,10 @@ class _UploadFormCardState extends State<UploadFormCard> {
           _aiStatus = 2;
           _saveStatus = 1;
           _brainAgeController.text = result['brainAge'].toString();
-          _riskScoreController.text = result['riskScore'].toString();
+          _riskScoreController.text =
+              result['riskScore'] == null
+                  ? "未做認知測驗無法評估"
+                  : result['riskScore'].toString();
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -202,6 +210,10 @@ class _UploadFormCardState extends State<UploadFormCard> {
             backgroundColor: Colors.green,
           ),
         );
+        // 🔹 自動執行下一步
+        if (_autoProceed) {
+          await _handleSaveSlices();
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -341,12 +353,27 @@ class _UploadFormCardState extends State<UploadFormCard> {
               false,
             ),
             _buildInputRow(
-              '失智症風險',
-              '失智症風險 (AI計算)',
+              '阿茲海默症評估',
+              '阿茲海默症評估 (AI計算)',
               controller: _riskScoreController,
               false,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Checkbox(
+                  value: _autoProceed,
+                  onChanged: (value) {
+                    setState(() {
+                      _autoProceed = value ?? false;
+                    });
+                  },
+                ),
+                const Text("自動執行下一步", style: TextStyle(color: Colors.white70)),
+              ],
+            ),
+            const SizedBox(height: 8),
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

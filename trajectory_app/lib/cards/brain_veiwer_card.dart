@@ -42,7 +42,7 @@ class _BrainViewerCardState extends State<BrainViewerCard> {
     try {
       final result = await ApiService.fetchAndUnzipSlices(
         widget.memberId,
-        widget.recordIndex,
+        widget.recordIndex + 1, // 資料庫紀錄從1開始
       );
 
       // 預先載入所有圖片
@@ -67,7 +67,7 @@ class _BrainViewerCardState extends State<BrainViewerCard> {
   }
 
   void _startLongPressTimer(String label, bool isIncrement) {
-    _longPressTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+    _longPressTimer = Timer.periodic(const Duration(milliseconds: 20), (_) {
       setState(() {
         final value = sliceIndex[label]!;
         final max = sliceMax[label]!;

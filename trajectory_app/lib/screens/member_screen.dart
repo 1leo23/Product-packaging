@@ -49,7 +49,7 @@ class _MemberScreenState extends State<MemberScreen> {
     super.initState();
     loadMemberInfo(); // 在 initState() 內執行，只執行一次
     mainWidgetList = <Widget>[
-      const ReportsWidget(),
+      ReportsWidget(memberId: widget.memberId),
       RecordsWidget(memberId: widget.memberId),
     ];
   }

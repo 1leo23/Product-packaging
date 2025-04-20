@@ -52,7 +52,7 @@ class _SelectRecordCardState extends State<SelectRecordCard> {
                               crossAxisCount: 3,
                               crossAxisSpacing: 10,
                               mainAxisSpacing: 10,
-                              childAspectRatio: 1.8,
+                              childAspectRatio: 1.7,
                             ),
                         itemCount: widget.data!.length,
                         itemBuilder: (context, index) {
@@ -97,7 +97,11 @@ class _SelectRecordCardState extends State<SelectRecordCard> {
               ),
               const SizedBox(height: 5),
               Text(
-                '實際年齡 / 腦部年齡 : ${record.actualAge} / ${record.brainAge}歲',
+                '實際年齡 : ${record.actualAge} 歲',
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+              ),
+              Text(
+                '腦部年齡 : ${record.brainAge}歲',
                 style: const TextStyle(color: Colors.white, fontSize: 12),
               ),
               const SizedBox(height: 5),

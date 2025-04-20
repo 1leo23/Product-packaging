@@ -330,6 +330,7 @@ class ApiService {
     }
   }
 
+  // 取得切片
   static Future<Map<String, List<File>>> fetchAndUnzipSlices(
     String memberId,
     int recordCount,
@@ -351,7 +352,13 @@ class ApiService {
     final sagittal = <File>[];
 
     final tempDir = await getTemporaryDirectory();
+    final folderPath = '${tempDir.path}\\$memberId-$recordCount';
 
+    // ✅ 建立資料夾（若不存在）
+    final dir = Directory(folderPath);
+    if (!(await dir.exists())) {
+      await dir.create(recursive: true);
+    }
     // 工具函數：處理每一切面
     Future<void> saveImages(
       String plane,
@@ -361,7 +368,7 @@ class ApiService {
       for (int i = 0; i < base64List.length; i++) {
         final b64 = base64List[i];
         final bytes = base64Decode(b64);
-        final path = '${tempDir.path}/${plane}_$i.png';
+        final path = '$folderPath/${plane}_$i.png';
         final file = File(path);
         await file.writeAsBytes(bytes);
         outputList.add(file);
