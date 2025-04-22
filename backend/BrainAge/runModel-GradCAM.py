@@ -84,7 +84,11 @@ class SFCN(nn.Module):
         x = x * 2
         return x
     
-def runModel(path):
+def runModel(path, cam_file_path):
+     # 選擇裝置
+    #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cpu")
+    print(f"使用裝置：{device}")
     # 讀取影像資料
     try:
         data = nib.load(path)
@@ -100,37 +104,6 @@ def runModel(path):
     # 增加 batch 與 channel 維度
     inputs = inputs.unsqueeze(0).unsqueeze(0)
     print("輸入影像尺寸:", inputs.shape)
-    
-    # 載入五個模型
-    '''
-    cnns = [None] * 5
-    model_dir = 'models'
-    pt_files = os.listdir(model_dir)
-    if len(pt_files) < 5:
-        print("模型數量不足，請確認 models 資料夾內有至少五個模型檔")
-        sys.exit(1)
-    for i in range(5):
-        cnns[i] = SFCN(num_classes=1)
-        pt_path = os.path.join(model_dir, pt_files[i])
-        # 載入模型參數
-        cnns[i].load_state_dict(torch.load(pt_path, map_location=torch.device('cpu')))
-        cnns[i].eval()
-
-    # 模型集成評估
-    ensemble_output = 0.0
-    for model_i in range(5):
-        with torch.no_grad():
-            outputs = cnns[model_i](inputs)
-            ensemble_output += outputs.item() * 0.2
-
-    brainAge = ensemble_output
-    print(f"腦齡：{brainAge}")
-    return brainAge
-    '''
-    # 載入一個模型
-    cnn = SFCN(num_classes=1)
-    cnn.load_state_dict(torch.load('models/sfcn-dropout-softmax_fold-4_269_4.5282.pt', map_location=torch.device('cpu')))
-    cnn.eval()
 
     # GradCAM 製作
     from pytorch_grad_cam import GradCAM, HiResCAM, ScoreCAM, GradCAMPlusPlus, AblationCAM, XGradCAM, EigenCAM, FullGrad
@@ -138,30 +111,47 @@ def runModel(path):
     from pytorch_grad_cam.utils.image import show_cam_on_image
     from torchvision.models import resnet50
     
-    target_layers = [cnn.layer3[-1]]
-    targets = [ClassifierOutputTarget(0)]
-    with GradCAM(model=cnn, target_layers=target_layers) as cam:
-        # You can also pass aug_smooth=True and eigen_smooth=True, to apply smoothing.
-        grayscale_cam = cam(input_tensor=inputs, targets=targets)
-        # In this example grayscale_cam has only one image in the batch:
-        grayscale_cam = grayscale_cam[0, :]
-        # 建立新的 nii 影像
-        grad_cam = nib.Nifti1Image(grayscale_cam, affine)
-        # 儲存成 .nii 檔
-        nib.save(grad_cam, "output.nii.gz")
-        # 儲存腦齡輸出
-        model_outputs = cam.outputs.item()
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    model_dir = os.path.join(base_dir,'models')
+    pt_files =sorted(os.listdir(model_dir))
+    if len(pt_files) < 5:
+        print("模型數量不足，請確認 models 資料夾內有至少五個模型檔")
+        sys.exit(1)
 
-    print(f"腦齡：{model_outputs}")
-    
-runModel('ppResult/ADNI-sc-CN_I18211_90_F_.nii.gz')
-'''
+    cams = []
+    outputs_sum = 0
+    for i in range(5):
+        print(f"正在跑第{i}個模型")
+        model = SFCN(num_classes=1)#.to(device)
+        pt_path = os.path.join(model_dir, pt_files[i])
+        model.load_state_dict(torch.load(pt_path, map_location=torch.device(device)))
+        model.eval()
+        
+        target_layers = [model.layer3[-1]]
+        targets = [ClassifierOutputTarget(0)]
+        with GradCAM(model=model, target_layers=target_layers) as cam:
+            #inputs.to(device)
+            grayscale_cam = cam(input_tensor=inputs, targets=targets)[0, :]
+            cams.append(grayscale_cam)
+            outputs_sum += cam.outputs.item()
+
+    avg_cam = sum(cams) / len(cams)
+    grad_cam = nib.Nifti1Image(avg_cam, affine)
+    nib.save(grad_cam,cam_file_path)
+    model_outputs = outputs_sum / 5
+    model_outputs  = np.round(model_outputs, 1)
+    return model_outputs
+
+
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    print("程式開始執行")
+    if len(sys.argv) < 3:
         print("請提供要預測的 nii.gz 檔案路徑")
         sys.exit(1)
     nii_file_path = sys.argv[1]
-    brain_age = runModel(nii_file_path)
+    cam_file_path = sys.argv[2]
+    brain_age = runModel(nii_file_path,cam_file_path)
     # 將預測結果輸出到標準輸出，方便其他程式捕捉
     print(brain_age)
-'''
+
+

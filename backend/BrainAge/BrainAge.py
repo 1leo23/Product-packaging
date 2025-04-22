@@ -34,14 +34,14 @@ def runPreprocessing(input_path):
     print("前處理結果檔案路徑:", processed_path)
     return processed_path
 
-def runBrainage(processed_path):
+def runBrainage(processed_path,cam_path):
     """使用 env_runmodel 環境執行 runModel.py 並取得預測的腦齡"""
     try:
         base_dir = os.path.dirname(os.path.abspath(__file__))  # 指向 backend/BrainAge/
-        script_path = os.path.join(base_dir, "runModel.py")
+        script_path = os.path.join(base_dir, "runModel-GradCAM.py")
         print(script_path,processed_path)
         result = subprocess.run(
-            ["conda", "run", "-n", "brainAge_runModel_env", "python",script_path, processed_path],
+            ["conda", "run", "-n", "brainAge_runModel_env", "python",script_path, processed_path, cam_path],
             capture_output=True,
             text=True,
             check=True
@@ -65,7 +65,7 @@ def runBrainage(processed_path):
         return None
 
     return brain_age
-
+'''
 def brain_age_calc(original_image_path):
     # 檢查並驗證輸入檔案路徑
     path = original_image_path
@@ -97,3 +97,4 @@ def brain_age_calc(original_image_path):
     # 輸出結果
     print(f"預測腦齡: {brain_age:.2f} 歲")
     return brain_age
+'''

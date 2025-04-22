@@ -8,7 +8,7 @@ from typing import Optional
 from BrainAge.BrainAge import runPreprocessing
 from BrainAge.BrainAge import runBrainage
 from AD_prediction.AD_prediction import runModel as runPreAD
-from nii_to_2D.nii_to_2D import runModel as runSlice
+from nii_to_2D.nii_to_2D import runSlice, runGradCAMSlice
 from routes_extra.auth_utils import check_token_valid
 import os
 import jwt
@@ -68,7 +68,7 @@ def get_all_slice_images_base64(member_id: str, record_count: int) -> Dict[str, 
     if not os.path.exists(folder_path):
         raise HTTPException(status_code=404, detail="找不到紀錄的資料夾")
 
-    slices = {'axial': [], 'coronal': [], 'sagittal': []}
+    slices = {'axial': [], 'coronal': [], 'sagittal': [],'gradCAM_axial': [], 'gradCAM_coronal': [], 'gradCAM_sagittal': []}
 
     for root, _, files in os.walk(folder_path):
         for file in sorted(files):
@@ -166,12 +166,13 @@ def ai_brain_age(
     
     OG_image_path = os.path.join(folder_path, "original.nii.gz")
     PP_image_path = os.path.join(folder_path, "preprocessing.nii.gz")
+    cam_image_path = os.path.join(folder_path, "gradCAM.nii.gz")
     if not os.path.exists(OG_image_path) or not os.path.exists(PP_image_path):
         raise HTTPException(status_code=404, detail="找不到 MRI 檔案")
 
     sex = member_collection.find_one({"id": member_id}, {"_id": 0, "sex": 1}).get("sex")
     try:
-        brain_age = runBrainage(PP_image_path)
+        brain_age = runBrainage(PP_image_path, cam_image_path)
         risk_score = runPreAD(MMSE_score=MMSE_score, original_image_path=OG_image_path,
                               actual_age=actual_age, sex=sex) if MMSE_score else None
     except Exception as e:
@@ -217,12 +218,14 @@ def ai_brain_age(
     base_dir = os.path.dirname(os.path.dirname(__file__))
     folder_path = os.path.join(base_dir, record_data["folder_path"])
     PP_image_path = os.path.join(folder_path, "preprocessing.nii.gz")
+    cam_image_path = os.path.join(folder_path, "gradCAM.nii.gz")
 
     if not os.path.exists(PP_image_path):
         raise HTTPException(status_code=404, detail=f"找不到前處理 MRI 檔案!!{PP_image_path}")
 
     try:
         output_dir = runSlice(PP_image_path, folder_path)
+        runGradCAMSlice(PP_image_path, cam_image_path, folder_path)
         return {"outputDirection": output_dir}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"切片失敗: {str(e)}")
