@@ -73,7 +73,7 @@ def get_all_slice_images_base64(member_id: str, record_count: int) -> Dict[str, 
     for root, _, files in os.walk(folder_path):
         for file in sorted(files):
             if file.endswith(".png"):
-                plane = os.path.basename(root).lower()
+                plane = os.path.basename(root)
                 if plane in slices:
                     file_path = os.path.join(root, file)
                     with open(file_path, "rb") as f:

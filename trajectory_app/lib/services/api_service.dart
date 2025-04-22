@@ -350,6 +350,9 @@ class ApiService {
     final axial = <File>[];
     final coronal = <File>[];
     final sagittal = <File>[];
+    final gradCAM_axial = <File>[];
+    final gradCAM_coronal = <File>[];
+    final gradCAM_sagittal = <File>[];
 
     final tempDir = await getTemporaryDirectory();
     final folderPath = '${tempDir.path}\\$memberId-$recordCount';
@@ -379,7 +382,28 @@ class ApiService {
     await saveImages('axial', jsonData['axial'] ?? [], axial);
     await saveImages('coronal', jsonData['coronal'] ?? [], coronal);
     await saveImages('sagittal', jsonData['sagittal'] ?? [], sagittal);
-
-    return {'axial': axial, 'coronal': coronal, 'sagittal': sagittal};
+    await saveImages(
+      'gradCAM_axial',
+      jsonData['gradCAM_axial'] ?? [],
+      gradCAM_axial,
+    );
+    await saveImages(
+      'gradCAM_coronal',
+      jsonData['gradCAM_coronal'] ?? [],
+      gradCAM_coronal,
+    );
+    await saveImages(
+      'gradCAM_sagittal',
+      jsonData['gradCAM_sagittal'] ?? [],
+      gradCAM_sagittal,
+    );
+    return {
+      'axial': axial,
+      'coronal': coronal,
+      'sagittal': sagittal,
+      'gradCAM_axial': gradCAM_axial,
+      'gradCAM_coronal': gradCAM_coronal,
+      'gradCAM_sagittal': gradCAM_sagittal,
+    };
   }
 }

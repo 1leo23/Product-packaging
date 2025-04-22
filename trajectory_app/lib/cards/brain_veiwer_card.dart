@@ -29,7 +29,7 @@ class _BrainViewerCardState extends State<BrainViewerCard> {
   Map<String, List<File>>? imageSet;
   final Map<String, int> sliceIndex = {'axial': 0, 'coronal': 0, 'sagittal': 0};
   final Map<String, int> sliceMax = {'axial': 0, 'coronal': 0, 'sagittal': 0};
-
+  bool showGradCAM = false;
   Timer? _longPressTimer;
 
   @override
@@ -42,11 +42,17 @@ class _BrainViewerCardState extends State<BrainViewerCard> {
     try {
       final result = await ApiService.fetchAndUnzipSlices(
         widget.memberId,
-        widget.recordIndex + 1, // 資料庫紀錄從1開始
+        widget.recordIndex + 1,
       );
 
-      // 預先載入所有圖片
-      for (final plane in ['axial', 'coronal', 'sagittal']) {
+      for (final plane in [
+        'axial',
+        'coronal',
+        'sagittal',
+        'gradCAM_axial',
+        'gradCAM_coronal',
+        'gradCAM_sagittal',
+      ]) {
         final imageList = result[plane] ?? [];
         for (final file in imageList) {
           await precacheImage(FileImage(file), context);
@@ -62,132 +68,31 @@ class _BrainViewerCardState extends State<BrainViewerCard> {
         }
       });
     } catch (e) {
-      print("❌ 載入切片失敗：$e");
+      print("\u274c \u8f09\u5165\u5207\u7247\u5931\u6557: $e");
     }
   }
 
-  void _startLongPressTimer(String label, bool isIncrement) {
-    _longPressTimer = Timer.periodic(const Duration(milliseconds: 20), (_) {
-      setState(() {
-        final value = sliceIndex[label]!;
-        final max = sliceMax[label]!;
-        if (isIncrement && value < max - 1) {
-          sliceIndex[label] = value + 1;
-        } else if (!isIncrement && value > 0) {
-          sliceIndex[label] = value - 1;
-        }
-      });
+  void _updateSlice(String label, bool isIncrement) {
+    setState(() {
+      final value = sliceIndex[label]!;
+      final max = sliceMax[label]!;
+      if (isIncrement && value < max - 1) {
+        sliceIndex[label] = value + 1;
+      } else if (!isIncrement && value > 0) {
+        sliceIndex[label] = value - 1;
+      }
     });
   }
 
-  void _stopLongPressTimer() {
+  void _startAutoStep(String plane, bool isIncrement) {
+    _longPressTimer = Timer.periodic(const Duration(milliseconds: 20), (_) {
+      _updateSlice(plane, isIncrement);
+    });
+  }
+
+  void _stopAutoStep() {
     _longPressTimer?.cancel();
     _longPressTimer = null;
-  }
-
-  Widget _buildSliceControl(String label) {
-    final value = sliceIndex[label]!;
-    final max = sliceMax[label]!;
-
-    return Column(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Listener(
-          onPointerSignal: (pointerSignal) {
-            if (pointerSignal is PointerScrollEvent && imageSet != null) {
-              setState(() {
-                if (pointerSignal.scrollDelta.dy < 0 && value > 0) {
-                  // 滾輪往上：減少切片
-                  sliceIndex[label] = value - 1;
-                } else if (pointerSignal.scrollDelta.dy > 0 &&
-                    value < max - 1) {
-                  // 滾輪往下：增加切片
-                  sliceIndex[label] = value + 1;
-                }
-              });
-            }
-          },
-
-          child: Container(
-            width: 230,
-            height: 230,
-            decoration: BoxDecoration(
-              color: Colors.black,
-              image:
-                  (imageSet != null &&
-                          imageSet![label]!.isNotEmpty &&
-                          value < max)
-                      ? DecorationImage(
-                        image: FileImage(imageSet![label]![value]),
-                        fit: BoxFit.cover,
-                      )
-                      : null,
-            ),
-            child:
-                (imageSet == null)
-                    ? const Center(
-                      child: CircularProgressIndicator(color: Colors.white),
-                    )
-                    : null,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            GestureDetector(
-              onLongPressStart: (_) => _startLongPressTimer(label, false),
-              onLongPressEnd: (_) => _stopLongPressTimer(),
-              child: IconButton(
-                onPressed:
-                    () => setState(() {
-                      if (value > 0) sliceIndex[label] = value - 1;
-                    }),
-                icon: const Icon(Icons.remove, color: Colors.white),
-                style: IconButton.styleFrom(backgroundColor: Colors.grey[800]),
-              ),
-            ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 60,
-              child: Center(
-                child: Text(
-                  value.toString(),
-                  style: const TextStyle(fontSize: 18, color: Colors.white),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onLongPressStart: (_) => _startLongPressTimer(label, true),
-              onLongPressEnd: (_) => _stopLongPressTimer(),
-              child: IconButton(
-                onPressed:
-                    () => setState(() {
-                      if (value < max - 1) sliceIndex[label] = value + 1;
-                    }),
-                icon: const Icon(Icons.add, color: Colors.white),
-                style: IconButton.styleFrom(backgroundColor: Colors.grey[800]),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  @override
-  void dispose() {
-    _stopLongPressTimer();
-    super.dispose();
   }
 
   @override
@@ -208,7 +113,7 @@ class _BrainViewerCardState extends State<BrainViewerCard> {
                     style: const TextStyle(fontSize: 16, color: Colors.white),
                   ),
                   Text(
-                    "實際年齡 / 腦部年齡：${widget.record.actualAge} / ${widget.record.brainAge} 歲",
+                    "實際年齡 / 腦部年齡: ${widget.record.actualAge} / ${widget.record.brainAge} 歲",
                     style: const TextStyle(fontSize: 14, color: Colors.white),
                   ),
                 ],
@@ -219,17 +124,150 @@ class _BrainViewerCardState extends State<BrainViewerCard> {
               ),
             ],
           ),
+          Row(
+            children: [
+              Checkbox(
+                value: showGradCAM,
+                onChanged: (value) {
+                  setState(() {
+                    showGradCAM = value ?? false;
+                  });
+                },
+              ),
+              const Text("顯示關鍵腦區", style: TextStyle(color: Colors.white70)),
+            ],
+          ),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildSliceControl("axial"),
-              _buildSliceControl("coronal"),
-              _buildSliceControl("sagittal"),
-            ],
+            children:
+                ['axial', 'coronal', 'sagittal'].map((plane) {
+                  return SliceViewer(
+                    label: plane,
+                    normalImages: imageSet?[plane],
+                    gradCAMImages: imageSet?['gradCAM_$plane'],
+                    index: sliceIndex[plane]!,
+                    showGradCAM: showGradCAM,
+                    onStep: (isIncrement) => _updateSlice(plane, isIncrement),
+                    onLongPressStartIncrement:
+                        () => _startAutoStep(plane, true),
+                    onLongPressStartDecrement:
+                        () => _startAutoStep(plane, false),
+                    onLongPressEnd: _stopAutoStep,
+                  );
+                }).toList(),
           ),
         ],
       ),
+    );
+  }
+}
+
+class SliceViewer extends StatelessWidget {
+  final String label;
+  final List<File>? normalImages;
+  final List<File>? gradCAMImages;
+  final int index;
+  final bool showGradCAM;
+  final void Function(bool isIncrement) onStep;
+  final void Function() onLongPressStartIncrement;
+  final void Function() onLongPressStartDecrement;
+  final void Function() onLongPressEnd;
+
+  const SliceViewer({
+    super.key,
+    required this.label,
+    required this.normalImages,
+    required this.gradCAMImages,
+    required this.index,
+    required this.showGradCAM,
+    required this.onStep,
+    required this.onLongPressStartIncrement,
+    required this.onLongPressStartDecrement,
+    required this.onLongPressEnd,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final currentImages = showGradCAM ? gradCAMImages : normalImages;
+    final currentImage =
+        (currentImages != null && index < currentImages.length)
+            ? currentImages[index]
+            : null;
+
+    return Column(
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Listener(
+          onPointerSignal: (pointerSignal) {
+            if (pointerSignal is PointerScrollEvent) {
+              if (pointerSignal.scrollDelta.dy < 0) {
+                onStep(false);
+              } else if (pointerSignal.scrollDelta.dy > 0) {
+                onStep(true);
+              }
+            }
+          },
+          child: Container(
+            width: 230,
+            height: 230,
+            color: Colors.black,
+            child:
+                currentImage != null
+                    ? Image.file(
+                      currentImage,
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                    )
+                    : const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            GestureDetector(
+              onLongPressStart: (_) => onLongPressStartDecrement(),
+              onLongPressEnd: (_) => onLongPressEnd(),
+              child: IconButton(
+                onPressed: () => onStep(false),
+                icon: const Icon(Icons.remove, color: Colors.white),
+                style: IconButton.styleFrom(backgroundColor: Colors.grey[800]),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 60,
+              child: Center(
+                child: Text(
+                  index.toString(),
+                  style: const TextStyle(fontSize: 18, color: Colors.white),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onLongPressStart: (_) => onLongPressStartIncrement(),
+              onLongPressEnd: (_) => onLongPressEnd(),
+              child: IconButton(
+                onPressed: () => onStep(true),
+                icon: const Icon(Icons.add, color: Colors.white),
+                style: IconButton.styleFrom(backgroundColor: Colors.grey[800]),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

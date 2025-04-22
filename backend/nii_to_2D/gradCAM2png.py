@@ -49,7 +49,7 @@ def generate_overlay_slices(mri_path: str, cam_path: str, output_dir: str):
 
         start, end = slice_ranges[name]
 
-        for j, i in enumerate(range(start, end)):
+        for j, i in enumerate(range(start, end+1)):
             bg = slicer(nii, i)
             overlay = slicer(cam, i)
 
@@ -67,7 +67,7 @@ def generate_overlay_slices(mri_path: str, cam_path: str, output_dir: str):
 
             plt.axis('off')
             plt.tight_layout()
-            plt.savefig(os.path.join(dir_path, f"{j}.png"), bbox_inches='tight', pad_inches=0)
+            plt.savefig(os.path.join(dir_path, f"{i-40:03d}.png"), bbox_inches='tight', pad_inches=0)
             plt.close()
 
     print(f"✅ 疊圖完成：{output_dir}，每方向切片範圍已套用")
