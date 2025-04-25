@@ -1,6 +1,3 @@
-import 'dart:isolate';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:trajectory_app/cards/line_char_card.dart';
 import 'package:trajectory_app/cards/risk_score_card.dart';

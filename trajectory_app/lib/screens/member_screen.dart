@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:trajectory_app/const/constant.dart';
-import 'package:trajectory_app/models/member_model.dart';
 import 'package:trajectory_app/services/api_service.dart';
 import 'package:trajectory_app/widgets/profile_widget.dart';
 import 'package:trajectory_app/widgets/records_widget.dart';
@@ -94,9 +93,10 @@ AppBar _appBar() {
     automaticallyImplyLeading: false,
     title: const Padding(
       padding: EdgeInsets.only(left: 25),
-      child: Text(
-        "Trajectory",
-        style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+      child: Image(
+        image: AssetImage('assets/images/Trajectory-white.png'),
+        height: 40,
+        fit: BoxFit.cover,
       ),
     ),
     backgroundColor: appBarColor,

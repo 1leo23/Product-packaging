@@ -264,14 +264,14 @@ class LineChartCard extends StatelessWidget {
                   lineBarsData: [
                     LineChartBarData(
                       spots: actualSpots,
-                      isCurved: true,
+                      isCurved: false,
                       color: Colors.greenAccent,
                       barWidth: 1.5, // 🔹 線條變細
                       dotData: const FlDotData(show: true), // 🔹 顯示每個點
                     ),
                     LineChartBarData(
                       spots: brainSpots,
-                      isCurved: true,
+                      isCurved: false,
                       color: Colors.orange,
                       barWidth: 1.5,
                       dotData: const FlDotData(show: true),

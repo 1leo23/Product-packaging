@@ -24,14 +24,10 @@ class SigninScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Trajectory',
-                      style: TextStyle(
-                        //fontFamily: 'OldEnglish',
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                    Image(
+                      image: AssetImage('assets/images/Trajectory-white.png'),
+                      height: 70,
+                      fit: BoxFit.cover,
                     ),
                     SizedBox(height: 20),
                     TabBar(
