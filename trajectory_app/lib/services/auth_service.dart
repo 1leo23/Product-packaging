@@ -4,7 +4,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trajectory_app/const/constant.dart'; // 儲存中小型檔案之套件
 
 class AuthService {
-  static const String baseUrl = backendUrl; // 你的後端 API 位址
+  static String baseUrl = backendUrl; // 你的後端 API 位址
+  static void setBaseUrl(String newUrl) {
+    baseUrl = newUrl;
+  }
+
+  static String getBaseUrl() {
+    return baseUrl; // 取目前用的
+  }
 
   // 登入方法
   static Future<bool> signin(

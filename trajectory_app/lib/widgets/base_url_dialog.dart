@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:trajectory_app/services/api_service.dart';
+import 'package:trajectory_app/services/auth_service.dart';
 
 class BaseUrlDialog extends StatefulWidget {
   const BaseUrlDialog({super.key});
@@ -29,6 +30,7 @@ class _BaseUrlDialogState extends State<BaseUrlDialog> {
     final newUrl = _urlController.text.trim();
     if (newUrl.isNotEmpty) {
       ApiService.setBaseUrl(newUrl);
+      AuthService.setBaseUrl(newUrl);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('✅ BaseUrl已切換為：$newUrl')));
