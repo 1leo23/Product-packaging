@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:trajectory_app/const/constant.dart';
 import 'package:trajectory_app/services/auth_service.dart';
+import 'package:trajectory_app/widgets/base_url_dialog.dart';
 
 class SigninScreen extends StatelessWidget {
   const SigninScreen({super.key});
@@ -9,7 +10,7 @@ class SigninScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(color: cardBackgroundColor),
-      child: const Center(
+      child: Center(
         child: SizedBox(
           width: 400,
           child: DefaultTabController(
@@ -17,26 +18,22 @@ class SigninScreen extends StatelessWidget {
             child: Scaffold(
               backgroundColor: Colors.transparent,
               body: Padding(
-                padding: EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                   horizontal: 32.0,
                   vertical: 100.0,
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Image(
-                      image: AssetImage('assets/images/Trajectory-white.png'),
-                      height: 70,
-                      fit: BoxFit.cover,
-                    ),
-                    SizedBox(height: 20),
-                    TabBar(
+                    logoSetBaseUrl(context),
+                    const SizedBox(height: 20),
+                    const TabBar(
                       indicatorColor: Colors.tealAccent,
                       labelColor: Colors.white,
                       unselectedLabelColor: Colors.grey,
                       tabs: [Tab(text: '一般登入'), Tab(text: '醫師登入')],
                     ),
-                    Expanded(
+                    const Expanded(
                       child: TabBarView(
                         children: [
                           SigninForm(role: 'member', route: '/memberScreen'),
@@ -50,6 +47,19 @@ class SigninScreen extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  GestureDetector logoSetBaseUrl(BuildContext context) {
+    return GestureDetector(
+      onLongPress: () {
+        BaseUrlDialog.show(context);
+      },
+      child: const Image(
+        image: AssetImage('assets/images/Trajectory-white.png'),
+        height: 70,
+        fit: BoxFit.cover,
       ),
     );
   }
@@ -108,7 +118,7 @@ class _SigninFormState extends State<SigninForm> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = "網路連線錯誤";
       });
     } finally {
       setState(() {

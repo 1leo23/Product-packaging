@@ -9,11 +9,18 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io'; // 用於 File 類型
 
 class ApiService {
-  static const String baseUrl = backendUrl; // 你的後端 API 位址
+  static String _baseUrl = backendUrl; // 你的後端 API 位址
+  static void setBaseUrl(String newUrl) {
+    _baseUrl = newUrl;
+  }
+
+  static String getBaseUrl() {
+    return _baseUrl; // 取目前用的
+  }
 
   // 獲取醫生資訊
   static Future<ManagerModel> getManagerInfo() async {
-    final url = Uri.parse('$baseUrl/manager/Info');
+    final url = Uri.parse('$_baseUrl/manager/Info');
     final token = await AuthService.getToken();
 
     try {
@@ -38,7 +45,7 @@ class ApiService {
 
   // 獲取成員資訊
   static Future<MemberModel> getMemberInfo(String memberId) async {
-    final url = Uri.parse('$baseUrl/member/Info?member_id=$memberId');
+    final url = Uri.parse('$_baseUrl/member/Info?member_id=$memberId');
     final token = await AuthService.getToken();
 
     try {
@@ -63,7 +70,7 @@ class ApiService {
 
   //新增成員
   static Future<bool> memberSignup(MemberModel memberModel, File image) async {
-    final url = Uri.parse('$baseUrl/manager/Member_Signup');
+    final url = Uri.parse('$_baseUrl/manager/Member_Signup');
     final token = await AuthService.getToken();
 
     // 創建 MultipartRequest
@@ -106,7 +113,7 @@ class ApiService {
 
   // 新增方法：獲取會員列表
   static Future<List<MemberModel>> getMemberList() async {
-    final url = Uri.parse('$baseUrl/manager/MemberList');
+    final url = Uri.parse('$_baseUrl/manager/MemberList');
     final token = await AuthService.getToken();
 
     try {
@@ -135,7 +142,7 @@ class ApiService {
 
   // 獲取管理者圖片 URL
   static Future<String?> getManagerImage(String managerId) async {
-    final url = Uri.parse('$baseUrl/manager/Profile/$managerId');
+    final url = Uri.parse('$_baseUrl/manager/Profile/$managerId');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -152,7 +159,7 @@ class ApiService {
 
   // 獲取會員圖片 URL
   static Future<String?> getMemberImage(String memberId) async {
-    final url = Uri.parse('$baseUrl/member/Profile/$memberId');
+    final url = Uri.parse('$_baseUrl/member/Profile/$memberId');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -173,7 +180,7 @@ class ApiService {
     required File niiFile, // 本地 .nii.gz 檔案
     int? mmseScore, // 可選
   }) async {
-    final url = Uri.parse('$baseUrl/ai/upload/Record');
+    final url = Uri.parse('$_baseUrl/ai/upload/Record');
     final token = await AuthService.getToken();
 
     if (token == null || token.isEmpty) {
@@ -231,7 +238,7 @@ class ApiService {
     }
 
     final url = Uri.parse(
-      '$baseUrl/ai/$memberId',
+      '$_baseUrl/ai/$memberId',
     ).replace(queryParameters: {'record_count': recordCount.toString()});
 
     try {
@@ -270,7 +277,7 @@ class ApiService {
     }
 
     final url = Uri.parse(
-      '$baseUrl/ai/restore/$memberId?record_count=$recordCount',
+      '$_baseUrl/ai/restore/$memberId?record_count=$recordCount',
     );
 
     try {
@@ -302,7 +309,7 @@ class ApiService {
       return [];
     }
 
-    final url = Uri.parse('$baseUrl/member/RecordsList?member_id=$memberId');
+    final url = Uri.parse('$_baseUrl/member/RecordsList?member_id=$memberId');
 
     try {
       final response = await http.post(
@@ -334,7 +341,7 @@ class ApiService {
     String memberId,
     int recordCount,
   ) async {
-    final url = Uri.parse('$baseUrl/ai/slice/all/$memberId/$recordCount');
+    final url = Uri.parse('$_baseUrl/ai/slice/all/$memberId/$recordCount');
     final response = await http.get(url);
 
     if (response.statusCode != 200) {
