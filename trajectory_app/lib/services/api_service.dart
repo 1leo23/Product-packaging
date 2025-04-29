@@ -6,6 +6,7 @@ import 'package:trajectory_app/models/member_model.dart';
 import 'package:trajectory_app/models/record_model.dart';
 import 'package:trajectory_app/services/auth_service.dart'; // 儲存中小型檔案之套件
 import 'package:path_provider/path_provider.dart';
+import 'package:http_parser/http_parser.dart';
 import 'dart:io'; // 用於 File 類型
 
 class ApiService {
@@ -205,6 +206,7 @@ class ApiService {
         'image_file',
         niiFile.path,
         filename: fileName,
+        contentType: MediaType('application', 'gzip'),
       ),
     );
 

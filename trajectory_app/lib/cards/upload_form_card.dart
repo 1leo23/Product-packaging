@@ -336,7 +336,7 @@ class _UploadFormCardState extends State<UploadFormCard> {
             ), // 如果已經建檔成功，就鎖住此欄位
             _buildInputRow(
               '認知測驗',
-              '1 ~ 100 (可不填寫)',
+              '1 ~ 30 (可不填寫)',
               controller: _mmseController,
               _uploadStatus != 2,
             ), // 如果已經建檔成功，就鎖住此欄位
